@@ -102,8 +102,8 @@
                 <div class="col-7">
                     <span class="opacity-75">ຍອດລວມເງິນສົດ</span>
                     <h1 class="display-6 fw-bold mb-0" id="totalDisplay">0</h1>
-                    <p class="mb-0 small"><i class="bi bi-box-seam"></i>  ຂາຍໄປທັ້ງຫມົດ <span id="countDisplay">0</span>
-                        ລາຍການ</p>
+                    <p class="mb-0 small"><i class="bi bi-box-seam"></i> ขายไปทั้งหมด <span id="countDisplay">0</span>
+                        รายการ</p>
                 </div>
                 <div class="col-5 text-end">
                     <i class="bi bi-graph-up-arrow fs-1 opacity-25"></i>
@@ -139,23 +139,17 @@
         document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
         document.getElementById('monthInput').value = new Date().toISOString().slice(0, 7);
 
-        // --- 2. ฟังก์ชันสลับโหมด ---
         function switchMode(mode) {
             currentMode = mode;
-            // จัดการ UI ปุ่ม
             document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
             document.getElementById('btn-' + mode).classList.add('active');
-
-            // สลับ Input
             document.getElementById('dateInput').classList.toggle('d-none', mode !== 'day');
             document.getElementById('monthInput').classList.toggle('d-none', mode !== 'month');
             document.getElementById('yearInput').classList.toggle('d-none', mode !== 'year');
-
             document.getElementById('current-view-label').innerText = "โหมด: " + (mode === 'day' ? 'รายวัน' : mode === 'month' ? 'รายเดือน' : 'รายปี');
             fetchData();
         }
 
-        // --- 3. ดึงข้อมูล ---
         function fetchData() {
             const container = document.getElementById('list-container');
             container.innerHTML = '<div class="text-center p-5 text-muted">กำลังโหลดข้อมูล...</div>';
@@ -171,7 +165,6 @@
                 if (currentMode === 'month') filterKey = document.getElementById('monthInput').value;
                 if (currentMode === 'year') filterKey = document.getElementById('yearInput').value;
 
-                // กรองข้อมูลตามวันที่เลือก
                 Object.keys(allSales).sort().reverse().forEach(date => {
                     if (date.startsWith(filterKey)) {
                         Object.keys(allSales[date]).forEach(saleId => {
@@ -179,7 +172,6 @@
                             total += parseFloat(item.total || 0);
                             count++;
 
-                            // สร้างปุ่ม (จะแสดงเฉพาะโหมดรายวันเพื่อให้จัดการได้ง่าย)
                             const actionButtons = `
                             <div class="btn-group ms-2">
                                 <button class="btn btn-outline-warning btn-sm" onclick="editSale('${date}', '${saleId}')"><i class="bi bi-pencil"></i></button>
@@ -210,29 +202,38 @@
             });
         }
 
-        // --- 4. ฟังก์ชันลบ (คืนสต็อก) ---
+        // --- ฟังก์ชันลบแบบสมบูรณ์ (ลบได้ทุกรายการ) ---
         async function deleteSale(date, saleId) {
             const pass = prompt("🔐 กรุณาป้อนรหัสผ่านเพื่อลบ:");
             if (pass !== ADMIN_PASS) return alert("รหัสผ่านไม่ถูกต้อง!");
 
-            if (confirm("ยืนยันการลบรายการ? สินค้าจะถูกคืนเข้าคลังโดยอัตโนมัติ")) {
+            if (confirm("ยืนยันการลบรายการ?")) {
                 const saleRef = db.ref(`sales/${date}/${saleId}`);
                 const saleSnap = await saleRef.once('value');
                 const sale = saleSnap.val();
 
-                if (sale && sale.qr) {
-                    // คืนสต็อก
+                if (!sale) return alert("ไม่พบข้อมูลรายการนี้");
+
+                // ถ้ามี QR ให้คืนสต็อกก่อน
+                if (sale.qr) {
                     const prodRef = db.ref(`products/${sale.qr}/qty`);
                     const prodSnap = await prodRef.once('value');
-                    await prodRef.set(parseInt(prodSnap.val() || 0) + parseInt(sale.qty));
-                    // ลบประวัติ
-                    await saleRef.remove();
-                    alert("🗑️ ลบรายการและคืนสต็อกสำเร็จ");
+                    if (prodSnap.exists()) {
+                        await prodRef.set(parseInt(prodSnap.val() || 0) + parseInt(sale.qty || 0));
+                    }
                 }
+
+                // สั่งลบประวัติแน่นอน
+                await saleRef.remove()
+                    .then(() => {
+                        alert("🗑️ ลบรายการเรียบร้อยแล้ว");
+                    })
+                    .catch((err) => {
+                        alert("เกิดข้อผิดพลาดในการลบ: " + err.message);
+                    });
             }
         }
 
-        // --- 5. ฟังก์ชันแก้ไข (คืนสต็อกส่วนต่าง) ---
         async function editSale(date, saleId) {
             const pass = prompt("🔐 กรุณาป้อนรหัสผ่านเพื่อแก้ไข:");
             if (pass !== ADMIN_PASS) return alert("รหัสผ่านไม่ถูกต้อง!");
@@ -246,21 +247,22 @@
 
             const diff = parseInt(newQty) - parseInt(sale.qty);
 
-            // อัปเดตสต็อกในห้อง products
-            const prodRef = db.ref(`products/${sale.qr}/qty`);
-            const prodSnap = await prodRef.once('value');
-            await prodRef.set(parseInt(prodSnap.val() || 0) - diff);
+            if (sale.qr) {
+                const prodRef = db.ref(`products/${sale.qr}/qty`);
+                const prodSnap = await prodRef.once('value');
+                if (prodSnap.exists()) {
+                    await prodRef.set(parseInt(prodSnap.val() || 0) - diff);
+                }
+            }
 
-            // อัปเดตรายการในห้อง sales
             await saleRef.update({
                 qty: parseInt(newQty),
                 total: parseFloat(sale.price) * parseInt(newQty)
             });
 
-            alert("✅ แก้ไขข้อมูลและปรับสต็อกเรียบร้อย");
+            alert("✅ แก้ไขข้อมูลเรียบร้อย");
         }
 
-        // โหลดครั้งแรก
         fetchData();
     </script>
 </body>
