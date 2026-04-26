@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuji Mobile - Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1500');
+            background-size: cover;
+            font-family: 'Kanit', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            width: 320px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .pin-dot {
+            font-size: 2.5rem;
+            letter-spacing: 10px;
+            color: #2d5a27;
+            margin-bottom: 20px;
+        }
+
+        .btn-n {
+            width: 70px;
+            height: 70px;
+            margin: 5px;
+            font-size: 1.5rem;
+            border-radius: 50%;
+            border: 1px solid #ddd;
+            background: white;
+            transition: 0.2s;
+        }
+
+        .btn-n:active {
+            background: #2d5a27;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-card">
+        <h4 class="mb-4">Fuji Mobile Shop</h4>
+        <div id="dot-area" class="pin-dot">____</div>
+        <div id="pad"></div>
+    </div>
+    <script>
+        let pin = "";
+        const pad = document.getElementById('pad');
+        for (let i = 1; i <= 9; i++) pad.innerHTML += `<button class="btn-n" onclick="press('${i}')">${i}</button>`;
+        pad.innerHTML += `<button class="btn-n text-danger" onclick="reset()">C</button><button class="btn-n" onclick="press('0')">0</button>`;
+
+        function press(n) { if (pin.length < 4) pin += n; update(); if (pin.length === 4) check(); }
+        function update() { document.getElementById('dot-area').innerText = "●".repeat(pin.length) + "_".repeat(4 - pin.length); }
+        function reset() { pin = ""; update(); }
+        function check() {
+            if (pin === "1234") { // ตั้งรหัสที่นี่
+                localStorage.setItem("fuji_auth", Date.now());
+                window.location.href = "dashboard.html";
+            } else { alert("รหัสผิด!"); reset(); }
+        }
+    </script>
+</body>
+
+</html>
