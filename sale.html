@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fuji Ultra POS - จ่ายเงินระบบโปร</title>
+    <title>Fuji Fast POS - ป้อนรหัส & สแกน</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
@@ -13,23 +13,21 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root {
-            --fuji-green: #2d5a27;
-            --glass: rgba(255, 255, 255, 0.9);
+            --fuji-primary: #0d6efd;
+            --glass: rgba(255, 255, 255, 0.95);
         }
 
         body {
-            background: linear-gradient(135deg, #e9f0e8 0%, #d3e0d1 100%);
+            background: #f0f2f5;
             font-family: 'Kanit', sans-serif;
             min-height: 100vh;
-            padding-bottom: 140px;
+            padding-bottom: 150px;
         }
 
-        .modern-card {
-            background: var(--glass);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        .header-pos {
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            padding: 15px 0;
         }
 
         #reader {
@@ -37,28 +35,31 @@
             border-radius: 15px;
             overflow: hidden;
             background: #000;
-            border: 4px solid #fff;
+        }
+
+        .input-focus {
+            border: 2px solid var(--fuji-primary) !important;
+            box-shadow: 0 0 10px rgba(13, 110, 253, 0.2);
         }
 
         .cart-item {
             background: white;
-            border-radius: 15px;
-            padding: 15px;
+            border-radius: 12px;
+            padding: 12px;
             margin-bottom: 10px;
             border: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
 
-        .total-panel {
+        .footer-total {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
             background: var(--glass);
-            backdrop-filter: blur(20px);
+            backdrop-filter: blur(10px);
             padding: 20px;
-            border-top: 2px solid #fff;
-            border-radius: 25px 25px 0 0;
+            border-top: 2px solid #eee;
             z-index: 1000;
         }
     </style>
@@ -66,36 +67,48 @@
 
 <body>
 
-    <div class="container py-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <a href="dashboard.html" class="btn btn-light rounded-circle shadow-sm"><i
-                    class="bi bi-chevron-left"></i></a>
-            <h4 class="fw-bold mb-0">คีย์ขาย Fuji Mobile</h4>
-            <a href="salehistory.html" class="btn btn-outline-dark btn-sm rounded-pill">ดูประวัติขาย</a>
+    <div class="header-pos mb-3 shadow-sm">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="dashboard.html" class="btn btn-outline-secondary btn-sm"><i class="bi bi-house"></i></a>
+            <h5 class="fw-bold mb-0">ขายสินค้า (ป้อนรหัส/สแกน)</h5>
+            <button class="btn btn-sm btn-danger" onclick="clearCart()">ล้างตะกร้า</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card p-3 border-0 shadow-sm mb-3 rounded-4">
+            <div id="reader" class="mb-3"></div>
+
+            <div class="input-group">
+                <span class="input-group-text bg-primary text-white border-0"><i class="bi bi-upc"></i></span>
+                <input type="text" id="barcode-input" class="form-control form-control-lg border-0 bg-light input-focus"
+                    placeholder="ป้อนรหัสบาร์โค้ดที่นี่..." autofocus>
+                <button class="btn btn-primary" onclick="manualAdd()">เพิ่ม</button>
+            </div>
+            <small class="text-muted mt-2 text-center d-block">พิมพ์รหัสแล้วกด Enter
+                หรือใช้เครื่องสแกนยิงเข้าช่องนี้ได้เลย</small>
         </div>
 
-        <div class="modern-card p-2 mb-3 text-center">
-            <div id="reader"></div>
-            <div class="py-2 small text-muted"><i class="bi bi-lightning-fill text-warning"></i>
-                สแกนบาร์โค้ดเพื่อเพิ่มรายการ</div>
+        <div class="d-flex justify-content-between px-2 mb-2">
+            <span class="fw-bold text-secondary">รายการสินค้า</span>
+            <span class="badge bg-dark" id="item-count">0 ชิ้น</span>
         </div>
 
-        <div class="px-2 mb-2 d-flex justify-content-between align-items-center">
-            <span class="fw-bold">รายการในตะกร้า</span>
-            <button class="btn btn-sm text-danger" onclick="clearCart()">ล้างตะกร้า</button>
-        </div>
         <div id="cart-list">
         </div>
     </div>
 
-    <div class="total-panel shadow-lg">
-        <div class="container text-center">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="text-muted">ยอดรวมทั้งสิ้น:</span>
-                <span class="h1 mb-0 fw-bold text-success" id="grand-total">0</span>
+    <div class="footer-total">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-end mb-3">
+                <span class="text-muted">ราคารวมทั้งหมด:</span>
+                <div class="text-end">
+                    <span class="h1 fw-bold text-primary mb-0" id="grand-total">0</span>
+                    <span class="text-primary fw-bold"> บาท</span>
+                </div>
             </div>
-            <button class="btn btn-success w-100 py-3 rounded-pill fw-bold fs-5 shadow" onclick="checkout()">
-                ยืนยันชำระเงิน <i class="bi bi-check-circle-fill ms-2"></i>
+            <button class="btn btn-success w-100 py-3 rounded-3 fw-bold fs-5" onclick="checkout()">
+                <i class="bi bi-cart-check"></i> ยืนยันการขาย
             </button>
         </div>
     </div>
@@ -117,28 +130,61 @@
         let cart = [];
         let allProducts = {};
 
-        // ดึงข้อมูลสินค้ามา Cache ไว้เพื่อความเร็ว
+        // ดึงข้อมูลสินค้าทั้งหมดมาไว้ในเครื่อง (Cache) เพื่อให้ค้นหาได้ทันทีไม่ต้องรอเน็ต
         db.ref('products').on('value', snap => {
             allProducts = snap.val() || {};
+            console.log("Database Synced");
         });
 
-        // --- 2. SCANNER SETUP ---
-        const html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (txt) => {
-            const product = allProducts[txt];
-            if (product) {
-                if (product.qty <= 0) return alert("สินค้าหมด!");
-                addItem(txt, product);
-                if (navigator.vibrate) navigator.vibrate(50);
+        // --- 2. MANUAL INPUT LOGIC ---
+        const barcodeInput = document.getElementById('barcode-input');
+
+        // เมื่อกด Enter ในช่องป้อนรหัส
+        barcodeInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                manualAdd();
             }
         });
 
-        // --- 3. CART LOGIC ---
+        function manualAdd() {
+            const code = barcodeInput.value.trim();
+            if (code) {
+                const product = allProducts[code];
+                if (product) {
+                    if (product.qty <= 0) {
+                        alert("สินค้าชิ้นนี้หมดสต็อก!");
+                    } else {
+                        addItem(code, product);
+                        barcodeInput.value = ""; // ล้างช่องเพื่อให้ป้อนชิ้นต่อไปได้ทันที
+                        barcodeInput.focus();
+                    }
+                } else {
+                    alert("ไม่พบรหัสสินค้านี้ในระบบ!");
+                }
+            }
+        }
+
+        // --- 3. CAMERA SCANNER (ความเร็วสูง) ---
+        const html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start({ facingMode: "environment" }, { fps: 25, qrbox: 250 }, (txt) => {
+            const product = allProducts[txt];
+            if (product && product.qty > 0) {
+                addItem(txt, product);
+                // ป้องกันการสแกนซ้ำรัวๆ
+                html5QrCode.pause();
+                setTimeout(() => html5QrCode.resume(), 1500);
+            }
+        });
+
+        // --- 4. CART & UI ---
         function addItem(qr, p) {
-            const idx = cart.findIndex(i => i.qr === qr);
+            const idx = cart.findIndex(item => item.qr === qr);
             if (idx > -1) {
-                if (cart[idx].qty < p.qty) cart[idx].qty++;
-                else alert("สินค้าในร้านไม่พอ!");
+                if (cart[idx].qty < p.qty) {
+                    cart[idx].qty++;
+                } else {
+                    alert("จำนวนในสต็อกไม่พอขาย!");
+                }
             } else {
                 cart.unshift({ qr: qr, name: p.name, price: p.price, qty: 1, stock: p.qty });
             }
@@ -146,26 +192,33 @@
         }
 
         function renderCart() {
-            const div = document.getElementById('cart-list');
+            const list = document.getElementById('cart-list');
             let total = 0;
-            div.innerHTML = "";
+            let count = 0;
+            list.innerHTML = "";
+
             cart.forEach((item, i) => {
                 total += item.price * item.qty;
-                div.innerHTML += `
+                count += item.qty;
+                list.innerHTML += `
                 <div class="cart-item d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="fw-bold">${item.name}</div>
-                        <div class="text-success small">${item.price.toLocaleString()} x ${item.qty}</div>
+                        <div class="fw-bold text-dark">${item.name}</div>
+                        <div class="small text-muted">รหัส: ${item.qr}</div>
+                        <div class="text-primary fw-bold">${item.price.toLocaleString()}.-</div>
                     </div>
                     <div class="d-flex align-items-center">
-                        <button class="btn btn-sm btn-light border" onclick="updateQty(${i},-1)">-</button>
-                        <span class="mx-2 fw-bold">${item.qty}</span>
-                        <button class="btn btn-sm btn-light border" onclick="updateQty(${i},1)">+</button>
-                        <i class="bi bi-trash text-danger ms-3" onclick="removeItem(${i})"></i>
+                        <div class="btn-group btn-group-sm me-3">
+                            <button class="btn btn-light border" onclick="updateQty(${i},-1)">-</button>
+                            <span class="btn btn-white border-top border-bottom disabled text-dark" style="min-width:40px">${item.qty}</span>
+                            <button class="btn btn-light border" onclick="updateQty(${i},1)">+</button>
+                        </div>
+                        <button class="btn btn-link text-danger p-0" onclick="removeItem(${i})"><i class="bi bi-trash fs-5"></i></button>
                     </div>
                 </div>`;
             });
             document.getElementById('grand-total').innerText = total.toLocaleString();
+            document.getElementById('item-count').innerText = count + " ชิ้น";
         }
 
         function updateQty(i, n) {
@@ -177,47 +230,45 @@
         function removeItem(i) { cart.splice(i, 1); renderCart(); }
         function clearCart() { cart = []; renderCart(); }
 
-        // --- 4. CHECKOUT (ฟังก์ชันจ่ายเงินเวอร์ชันเต็ม) ---
+        // --- 5. CHECKOUT (บันทึกยอด & ตัดสต็อก) ---
         async function checkout() {
             if (cart.length === 0) return;
 
-            if (confirm(`ยืนยันการขายบิลนี้รวม ${document.getElementById('grand-total').innerText} บาท?`)) {
+            if (confirm(`ยืนยันการรับชำระเงินบิลนี้?`)) {
                 const now = new Date();
-                const dateKey = now.toISOString().split('T')[0]; // เช่น 2026-04-26 (ใช้สำหรับเป็นหัวข้อใน Firebase)
-                const dateFull = now.toLocaleDateString('th-TH'); // วัน/เดือน/ปี แบบไทย
-                const timeStr = now.toLocaleTimeString('th-TH'); // เวลา 13:45:00
+                const dateKey = now.toISOString().split('T')[0];
+                const dateFull = now.toLocaleDateString('th-TH');
+                const timeStr = now.toLocaleTimeString('th-TH');
 
                 const updates = {};
 
                 cart.forEach(item => {
-                    // 1. คำสั่งอัปเดตสต็อกสินค้า (หักลบออก)
                     updates[`/products/${item.qr}/qty`] = item.stock - item.qty;
-
-                    // 2. เตรียมข้อมูลบันทึกประวัติการขาย
                     const saleRef = db.ref(`sales/${dateKey}`).push();
                     updates[`/sales/${dateKey}/${saleRef.key}`] = {
-                        qr: item.qr,       // เก็บไว้เพื่อใช้คืนสต็อกเวลาลบประวัติ
+                        qr: item.qr,
                         name: item.name,
                         price: item.price,
                         qty: item.qty,
                         total: item.price * item.qty,
                         fullDate: dateFull,
-                        time: timeStr      // เก็บเวลาที่ขายจริง
+                        time: timeStr
                     };
                 });
 
                 try {
-                    // อัปเดตสต็อกและบันทึกประวัติพร้อมกันทีเดียว
                     await db.ref().update(updates);
-                    alert("✅ ขายสำเร็จ! บันทึกข้อมูลเรียบร้อย");
+                    alert("✅ ขายสำเร็จ! สต็อกอัปเดตและบันทึกประวัติแล้ว");
                     cart = [];
                     renderCart();
+                    barcodeInput.focus();
                 } catch (err) {
-                    alert("❌ เกิดข้อผิดพลาด: " + err.message);
+                    alert("เกิดข้อผิดพลาด: " + err.message);
                 }
             }
         }
     </script>
+
 </body>
 
 </html>
