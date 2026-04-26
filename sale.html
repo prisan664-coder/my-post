@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fuji Mobile - ระบบขายสินค้า</title>
+    <title>Fuji Ultra POS - จ่ายเงินระบบโปร</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
@@ -12,17 +12,24 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body {
-            background: #f8f9fa;
-            font-family: 'Kanit', sans-serif;
-            padding-bottom: 100px;
+        :root {
+            --fuji-green: #2d5a27;
+            --glass: rgba(255, 255, 255, 0.9);
         }
 
-        .header-sale {
-            background: #0d6efd;
-            color: white;
-            padding: 15px;
-            border-radius: 0 0 20px 20px;
+        body {
+            background: linear-gradient(135deg, #e9f0e8 0%, #d3e0d1 100%);
+            font-family: 'Kanit', sans-serif;
+            min-height: 100vh;
+            padding-bottom: 140px;
+        }
+
+        .modern-card {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
         }
 
         #reader {
@@ -30,24 +37,28 @@
             border-radius: 15px;
             overflow: hidden;
             background: #000;
+            border: 4px solid #fff;
         }
 
         .cart-item {
             background: white;
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-left: 5px solid #0d6efd;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
         }
 
-        .sticky-bottom-total {
+        .total-panel {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            background: white;
-            padding: 15px;
-            box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            border-top: 2px solid #fff;
+            border-radius: 25px 25px 0 0;
             z-index: 1000;
         }
     </style>
@@ -55,45 +66,42 @@
 
 <body>
 
-    <div class="header-sale shadow-sm mb-3">
-        <div class="container d-flex justify-content-between align-items-center">
-            <a href="dashboard.html" class="text-white text-decoration-none"><i class="bi bi-arrow-left"></i> กลับ</a>
-            <h5 class="mb-0">คีย์ขายสินค้า (Fuji Mobile)</h5>
-            <button class="btn btn-sm btn-light" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i>
-                รีเซ็ต</button>
+    <div class="container py-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <a href="dashboard.html" class="btn btn-light rounded-circle shadow-sm"><i
+                    class="bi bi-chevron-left"></i></a>
+            <h4 class="fw-bold mb-0">คีย์ขาย Fuji Mobile</h4>
+            <a href="salehistory.html" class="btn btn-outline-dark btn-sm rounded-pill">ดูประวัติขาย</a>
         </div>
-    </div>
 
-    <div class="container">
-        <div class="card p-2 border-0 shadow-sm mb-3">
+        <div class="modern-card p-2 mb-3 text-center">
             <div id="reader"></div>
-            <div class="input-group mt-2">
-                <input type="text" id="manual-qr" class="form-control text-center" placeholder="รหัสสินค้า">
-                <button class="btn btn-primary"
-                    onclick="searchProduct(document.getElementById('manual-qr').value)">ตกลง</button>
-            </div>
+            <div class="py-2 small text-muted"><i class="bi bi-lightning-fill text-warning"></i>
+                สแกนบาร์โค้ดเพื่อเพิ่มรายการ</div>
         </div>
 
-        <h6><i class="bi bi-cart3"></i> รายการขายในบิลนี้:</h6>
+        <div class="px-2 mb-2 d-flex justify-content-between align-items-center">
+            <span class="fw-bold">รายการในตะกร้า</span>
+            <button class="btn btn-sm text-danger" onclick="clearCart()">ล้างตะกร้า</button>
+        </div>
         <div id="cart-list">
-            <p class="text-center text-muted py-4">ยังไม่มีสินค้าในตะกร้า<br>กรุณาสแกนบาร์โค้ด</p>
         </div>
     </div>
 
-    <div class="sticky-bottom-total">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="h5 mb-0">ยอดรวมทั้งหมด:</span>
-                <span class="h3 mb-0 text-primary fw-bold" id="grand-total">0</span>
+    <div class="total-panel shadow-lg">
+        <div class="container text-center">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted">ยอดรวมทั้งสิ้น:</span>
+                <span class="h1 mb-0 fw-bold text-success" id="grand-total">0</span>
             </div>
-            <button class="btn btn-success btn-lg w-100 py-3 rounded-pill shadow" onclick="checkout()">
-                <i class="bi bi-cash-stack"></i> ยืนยันการขายและรับเงิน
+            <button class="btn btn-success w-100 py-3 rounded-pill fw-bold fs-5 shadow" onclick="checkout()">
+                ยืนยันชำระเงิน <i class="bi bi-check-circle-fill ms-2"></i>
             </button>
         </div>
     </div>
 
     <script>
-        // --- 1. CONFIG (ใช้ Config ของคุณ) ---
+        // --- 1. FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyC8b0h8yyTo5th6UMrI4_dKUB1ZnvCwZBw",
             authDomain: "fuji-mobile-shop.firebaseapp.com",
@@ -106,123 +114,110 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let cart = []; // เก็บรายการที่กำลังจะขาย
+        let cart = [];
+        let allProducts = {};
 
-        // --- 2. SCANNER ---
-        const scanner = new Html5Qrcode("reader");
-        scanner.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, (txt) => {
-            searchProduct(txt);
-            // สแกนเสร็จให้หยุดรอแป๊บนึงเพื่อไม่ให้สแกนซ้ำรัวๆ
-            scanner.pause();
-            setTimeout(() => scanner.resume(), 2000);
+        // ดึงข้อมูลสินค้ามา Cache ไว้เพื่อความเร็ว
+        db.ref('products').on('value', snap => {
+            allProducts = snap.val() || {};
         });
 
-        // --- 3. SEARCH & ADD TO CART ---
-        function searchProduct(qr) {
-            if (!qr) return;
-            db.ref('products/' + qr).once('value', s => {
-                const d = s.val();
-                if (d) {
-                    if (d.qty <= 0) {
-                        alert("สินค้าชิ้นนี้หมดสต็อกแล้ว!");
-                        return;
-                    }
-                    addToCart(qr, d);
-                } else {
-                    alert("ไม่พบสินค้าในระบบ!");
-                }
-            });
-        }
+        // --- 2. SCANNER SETUP ---
+        const html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (txt) => {
+            const product = allProducts[txt];
+            if (product) {
+                if (product.qty <= 0) return alert("สินค้าหมด!");
+                addItem(txt, product);
+                if (navigator.vibrate) navigator.vibrate(50);
+            }
+        });
 
-        function addToCart(qr, product) {
-            // เช็คว่าในตะกร้ามีสินค้านี้หรือยัง
-            const found = cart.find(item => item.qr === qr);
-            if (found) {
-                if (found.qty < product.qty) {
-                    found.qty += 1;
-                } else {
-                    alert("ไม่สามารถเพิ่มได้เกินจำนวนสต็อกที่มี!");
-                }
+        // --- 3. CART LOGIC ---
+        function addItem(qr, p) {
+            const idx = cart.findIndex(i => i.qr === qr);
+            if (idx > -1) {
+                if (cart[idx].qty < p.qty) cart[idx].qty++;
+                else alert("สินค้าในร้านไม่พอ!");
             } else {
-                cart.push({ qr: qr, name: product.name, price: product.price, qty: 1, stock: product.qty });
+                cart.unshift({ qr: qr, name: p.name, price: p.price, qty: 1, stock: p.qty });
             }
-            updateCartUI();
+            renderCart();
         }
 
-        // --- 4. UPDATE UI ---
-        function updateCartUI() {
-            const list = document.getElementById('cart-list');
-            list.innerHTML = "";
-            let grandTotal = 0;
-
-            cart.forEach((item, index) => {
-                const subTotal = item.price * item.qty;
-                grandTotal += subTotal;
-                list.innerHTML += `
-                <div class="cart-item shadow-sm">
-                    <div class="d-flex justify-content-between">
-                        <strong class="text-dark">${item.name}</strong>
-                        <button class="btn btn-sm text-danger" onclick="removeItem(${index})"><i class="bi bi-trash"></i></button>
+        function renderCart() {
+            const div = document.getElementById('cart-list');
+            let total = 0;
+            div.innerHTML = "";
+            cart.forEach((item, i) => {
+                total += item.price * item.qty;
+                div.innerHTML += `
+                <div class="cart-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold">${item.name}</div>
+                        <div class="text-success small">${item.price.toLocaleString()} x ${item.qty}</div>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center mt-2">
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-secondary" onclick="changeQty(${index}, -1)">-</button>
-                            <span class="px-3 border d-flex align-items-center">${item.qty}</span>
-                            <button class="btn btn-outline-secondary" onclick="changeQty(${index}, 1)">+</button>
-                        </div>
-                        <div class="text-primary fw-bold">${subTotal.toLocaleString()} บ.</div>
+                    <div class="d-flex align-items-center">
+                        <button class="btn btn-sm btn-light border" onclick="updateQty(${i},-1)">-</button>
+                        <span class="mx-2 fw-bold">${item.qty}</span>
+                        <button class="btn btn-sm btn-light border" onclick="updateQty(${i},1)">+</button>
+                        <i class="bi bi-trash text-danger ms-3" onclick="removeItem(${i})"></i>
                     </div>
-                </div>
-            `;
+                </div>`;
             });
-
-            document.getElementById('grand-total').innerText = grandTotal.toLocaleString();
+            document.getElementById('grand-total').innerText = total.toLocaleString();
         }
 
-        function changeQty(index, amount) {
-            const item = cart[index];
-            if (amount > 0 && item.qty < item.stock) {
-                item.qty += 1;
-            } else if (amount < 0 && item.qty > 1) {
-                item.qty -= 1;
-            }
-            updateCartUI();
+        function updateQty(i, n) {
+            if (n > 0 && cart[i].qty < cart[i].stock) cart[i].qty++;
+            else if (n < 0 && cart[i].qty > 1) cart[i].qty--;
+            renderCart();
         }
 
-        function removeItem(index) {
-            cart.splice(index, 1);
-            updateCartUI();
-        }
+        function removeItem(i) { cart.splice(i, 1); renderCart(); }
+        function clearCart() { cart = []; renderCart(); }
 
-        // --- 5. CHECKOUT & CUT STOCK ---
+        // --- 4. CHECKOUT (ฟังก์ชันจ่ายเงินเวอร์ชันเต็ม) ---
         async function checkout() {
-            if (cart.length === 0) return alert("ยังไม่มีสินค้าในตะกร้า!");
+            if (cart.length === 0) return;
 
-            if (confirm(`ยืนยันการขายทั้งหมดรวม ${document.getElementById('grand-total').innerText} บาท?`)) {
-                const date = new Date().toISOString().split('T')[0];
-                const time = new Date().toLocaleTimeString();
+            if (confirm(`ยืนยันการขายบิลนี้รวม ${document.getElementById('grand-total').innerText} บาท?`)) {
+                const now = new Date();
+                const dateKey = now.toISOString().split('T')[0]; // เช่น 2026-04-26 (ใช้สำหรับเป็นหัวข้อใน Firebase)
+                const dateFull = now.toLocaleDateString('th-TH'); // วัน/เดือน/ปี แบบไทย
+                const timeStr = now.toLocaleTimeString('th-TH'); // เวลา 13:45:00
 
-                for (let item of cart) {
-                    // 1. ตัดสต็อก
-                    const newStock = item.stock - item.qty;
-                    await db.ref('products/' + item.qr + '/qty').set(newStock);
+                const updates = {};
 
-                    // 2. บันทึกประวัติการขาย
-                    await db.ref('sales/' + date).push({
+                cart.forEach(item => {
+                    // 1. คำสั่งอัปเดตสต็อกสินค้า (หักลบออก)
+                    updates[`/products/${item.qr}/qty`] = item.stock - item.qty;
+
+                    // 2. เตรียมข้อมูลบันทึกประวัติการขาย
+                    const saleRef = db.ref(`sales/${dateKey}`).push();
+                    updates[`/sales/${dateKey}/${saleRef.key}`] = {
+                        qr: item.qr,       // เก็บไว้เพื่อใช้คืนสต็อกเวลาลบประวัติ
                         name: item.name,
                         price: item.price,
                         qty: item.qty,
                         total: item.price * item.qty,
-                        time: time
-                    });
-                }
+                        fullDate: dateFull,
+                        time: timeStr      // เก็บเวลาที่ขายจริง
+                    };
+                });
 
-                alert("✅ ขายสำเร็จและตัดสต็อกเรียบร้อย!");
-                location.reload();
+                try {
+                    // อัปเดตสต็อกและบันทึกประวัติพร้อมกันทีเดียว
+                    await db.ref().update(updates);
+                    alert("✅ ขายสำเร็จ! บันทึกข้อมูลเรียบร้อย");
+                    cart = [];
+                    renderCart();
+                } catch (err) {
+                    alert("❌ เกิดข้อผิดพลาด: " + err.message);
+                }
             }
         }
     </script>
-
 </body>
 
 </html>
