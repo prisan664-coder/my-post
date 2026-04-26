@@ -23,6 +23,31 @@
             text-align: center;
         }
 
+        /* ปรับส่วนสไลด์ให้อยู่ตรงกลางและมีพื้นที่ว่าง */
+        .carousel-section {
+            padding: 25px 15px;
+            /* เพิ่มพื้นที่ว่างซ้ายขวา */
+            margin-top: 5px;
+            /* ระยะห่างจากด้านบน */
+            margin-bottom: 5px;
+            /* ระยะห่างจากด้านล่าง */
+        }
+
+        .carousel-inner {
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 4px solid white;
+            /* เพิ่มขอบขาวให้ดูเด่นขึ้น */
+        }
+
+        .carousel-item img {
+            height: 200px;
+            /* เพิ่มความสูงอีกนิดให้ดูเต็มตา */
+            object-fit: cover;
+            background: #ddd;
+        }
+
         .menu-btn {
             background: white;
             border-radius: 20px;
@@ -41,7 +66,6 @@
             transform: scale(0.95);
         }
 
-        /* ส่วนของคู่มือการใช้งานที่เพิ่มเข้าไป */
         .guide-box {
             background: #ffffff;
             border-radius: 20px;
@@ -80,7 +104,46 @@
         <p class="mb-0 opacity-75">ລະບົບຈັດການຂາຍທີສະດວກວ່ອງໄວ</p>
     </div>
 
-    <div class="container mt-4">
+    <div class="container carousel-section">
+        <div id="fujiCarousel" class="carousel slide" data-bs-ride="carousel">
+            <div class="carousel-indicators">
+                <button type="button" data-bs-target="#fujiCarousel" data-bs-slide-to="0" class="active"></button>
+                <button type="button" data-bs-target="#fujiCarousel" data-bs-slide-to="1"></button>
+                <button type="button" data-bs-target="#fujiCarousel" data-bs-slide-to="2"></button>
+                <button type="button" data-bs-target="#fujiCarousel" data-bs-slide-to="3"></button>
+            </div>
+            <div class="carousel-inner">
+                <div class="carousel-item active">
+                    <img src="https://scontent.fvte5-1.fna.fbcdn.net/v/t39.30808-6/670418532_122161032548900284_5398463396496129367_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=1d70fc&_nc_ohc=CJDGqvXds-AQ7kNvwEX1PCO&_nc_oc=AdoQsmkRy7TajMw_OehBqd-Bx5dbiakm65y04dqvRAva_B5C0QJOnVUYefsukt-2W5M&_nc_zt=23&_nc_ht=scontent.fvte5-1.fna&_nc_gid=2jLPzQPbo_J_rOfpTjwapg&_nc_ss=7b2a8&oh=00_Af3TVDulXuyxFVMJ71MhwsBSMddCteq-PhLC2UwaXgPgjQ&oe=69F3E8D7"
+                        class="d-block w-100" alt="Slide 1">
+                </div>
+                <div class="carousel-item">
+                    <img src="https://scontent.fvte1-1.fna.fbcdn.net/v/t39.30808-6/658834636_122159864936900284_8431702145865931081_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=2a1932&_nc_ohc=9ttx_t1V70wQ7kNvwEQTAgd&_nc_oc=Adq1KYnLLP1zko3lgGm7T3UOJ0Wt3kRL1Qe9r1v_L2v07wdeSpo-PMw4nBuPaTNDmVw&_nc_zt=23&_nc_ht=scontent.fvte1-1.fna&_nc_gid=GJdHll4SfbhXu2NJr2a1DQ&_nc_ss=7b2a8&oh=00_Af016GRE5QC8nUCx1whfN23dVvrLAKJUz06IZ-NUq6Xy5A&oe=69F3CC06"
+                        class="d-block w-100" alt="Slide 2">
+                </div>
+                <div class="carousel-item">
+                    <img src="https://scontent.fvte5-1.fna.fbcdn.net/v/t39.30808-6/595227062_122143443482900284_5765873337795125380_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=b895b5&_nc_ohc=6KqxBKFELMEQ7kNvwEEiBiL&_nc_oc=AdrHpgH-Bn-S54bSkHgJhNlIdgJztOo1TOa9Z9apMShS7sKoHQIf4exhu1oOC-cYUZY&_nc_zt=23&_nc_ht=scontent.fvte5-1.fna&_nc_gid=Rg4JXYw28RBwV-d1dYA9DQ&_nc_ss=7b2a8&oh=00_Af0I5lnUMuQgJVc2EjhqyPooIFG2xpFHxbVvs24l-Zyl7g&oe=69F3D829"
+                        class="d-block w-100" alt="Slide 3">
+                </div>
+                <div class="carousel-item">
+                    <img src="https://scontent.fvte1-1.fna.fbcdn.net/v/t39.30808-6/624163906_122151683036900284_5684933632404332261_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=102&ccb=1-7&_nc_sid=7b2446&_nc_ohc=9McJlEOkqsgQ7kNvwG3oXo-&_nc_oc=AdrrZ2bdPpb1NAyHGT8Zx0NXbGJd_3aY_ub5en1JJL_idZJ3XnihR6fKdzYimddPv6g&_nc_zt=23&_nc_ht=scontent.fvte1-1.fna&_nc_gid=-Ax93x6g4FOgSXHXu8FLyQ&_nc_ss=7b2a8&oh=00_Af0OVJsWW3RknPhGCYmNlaJV-is4DI-gyx4034YT1kki_w&oe=69F3B8A4"
+                        class="d-block w-100" alt="Slide 4">
+                </div>
+                 <div class="carousel-item">
+                    <img src="https://scontent.fvte5-1.fna.fbcdn.net/v/t39.30808-6/605779674_122147383322900284_1675302753022948569_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=110&ccb=1-7&_nc_sid=7b2446&_nc_ohc=IznIQOTTrowQ7kNvwGyAhke&_nc_oc=Adp4cMjl9m28vMS6qNrsCXTOGo_B0sxQIa_AJPWsNs1e-2rOWWGy_sXmyLxgnljRUsc&_nc_zt=23&_nc_ht=scontent.fvte5-1.fna&_nc_gid=YRsTUknFVu44sz93ZtS9DA&_nc_ss=7b2a8&oh=00_Af36cPwpl27LY8BWp1KmhPTKb3HKT6E7Eb6y8SlgJFLuHQ&oe=69F3BC9B"
+                        class="d-block w-100" alt="Slide 5">
+                </div>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#fujiCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon"></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#fujiCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon"></span>
+            </button>
+        </div>
+    </div>
+
+    <div class="container mt-0">
         <div class="row g-3">
             <div class="col-6">
                 <a href="sale.html" class="menu-btn shadow-sm">
@@ -119,13 +182,13 @@
 
             <div class="guide-item">
                 <div class="guide-number">1</div>
-                <div><strong>ການເພີ່ມສິນຄ້າ:</strong> ໃຫ້ເຂົ້າໄປທີ່ເມນູ "ເພິ່ມສິນຄ້າໃຫມ່" ເພື່ອລົງທະບຽນສິນຄ້າ ແລະ
+                <div><strong>ການເພີ່ມສິນຄ້າ:</strong> ໃຫ້ເຂົ້າໄປທີ່ເມນູ "ເພິ່ມສິນຄ້າໃຫມ່" ເພື່ອລົງທະບຽນສินຄ້າ ແລະ
                     ກຳນົດລາຄາກ່ອນ.</div>
             </div>
 
             <div class="guide-item">
                 <div class="guide-number">2</div>
-                <div><strong>ການຂາຍສິນຄ້າ:</strong> ໃຊ້ເມນູ "ຄีย์ขายของ" ເພື່ອສະແກນບາໂຄ້ດ ຫຼື
+                <div><strong>ການຂາຍສິນຄ້າ:</strong> ໃຊ້ເມນູ "ຄີຂາຍເຄື່ອງ" ເພື່ອສະແກนບາໂຄ້ດ ຫຼື
                     ປ້ອນລະຫັດສິນຄ້າເພື່ອຕັດສະຕັອກ.</div>
             </div>
 
@@ -137,17 +200,18 @@
 
             <div class="guide-item">
                 <div class="guide-number">4</div>
-                <div><strong>ເບິ່ງຍອດຂາຍ:</strong> ທ່ານສາມາດເບິ່ງລາຍຮັບປະຈຳວັນ, ເດືອນ ຫຼື ປີ ໄດ້ທີ່ເມນູ "ປະຫວັດການຂາຍ".
+                <div><strong>ເບິ່ງຍອດຂາຍ:</strong> ທ່ານສາມາດເເບີ່ງລາຍຮັບປະຈຳວັນ, ເດືອນ ຫຼື ປີ ໄດ້ທີ່ເມນູ "ປະຫວັດການຂາຍ".
                 </div>
             </div>
 
             <hr>
-            <p class="small text-muted mb-0 text-center">หากพบปัญหาการใช้งาน กรุณาติดต่อผู้ดูแลระบบ</p>
+            <p class="small text-muted mb-0 text-center">ຫາກພົບບັນຫາບໍ່ເຂົ້າໃຈສາມາດສອບຖາມໄດ້
+                ອອກแบบເວັບດ້ວຍສູນແປງໂທระສັບຟູຈິໂມບາຍ</p>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // ระบบตรวจสอบการ Login
         if (!localStorage.getItem("fuji_auth")) {
             window.location.href = "index.html";
         }
