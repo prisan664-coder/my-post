@@ -4,149 +4,264 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sale History - Fuji Mobile</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Report & Manage - Fuji Mobile</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body {
-            background: #f0f2f5;
+            background: #f4f7f6;
             font-family: 'Kanit', sans-serif;
+            padding-bottom: 50px;
+        }
+
+        .report-card {
+            border: none;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 20px rgba(42, 82, 152, 0.2);
         }
 
         .history-card {
             border: none;
             border-radius: 15px;
-            transition: 0.3s;
-            margin-bottom: 10px;
-            border-left: 5px solid #dc3545;
+            margin-bottom: 12px;
+            transition: 0.2s;
+            background: white;
+            border-left: 5px solid #2a5298;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
-        .date-badge {
-            background: #e9ecef;
-            color: #495057;
-            border-radius: 8px;
-            padding: 5px 12px;
-            font-size: 0.85rem;
+        .nav-report {
+            background: white;
+            border-radius: 50px;
+            padding: 5px;
+            margin-bottom: 20px;
+            display: inline-flex;
+            border: 1px solid #ddd;
+        }
+
+        .btn-mode {
+            border-radius: 50px;
+            border: none;
+            padding: 8px 20px;
+            font-weight: 500;
+            transition: 0.3s;
+            color: #666;
+            background: transparent;
+        }
+
+        .btn-mode.active {
+            background: #2a5298;
+            color: white;
+        }
+
+        .navbar {
+            background: #1a1d20 !important;
         }
     </style>
 </head>
 
 <body>
 
-    <nav class="navbar navbar-dark bg-dark sticky-top">
-        <div class="container">
-            <a class="navbar-brand" href="dashboard.html"><i class="bi bi-arrow-left"></i> ประวัติการขาย</a>
-            <input type="date" id="filter-date" class="form-control form-control-sm w-auto"
-                onchange="loadHistory(this.value)">
+    <nav class="navbar navbar-dark sticky-top shadow">
+        <div class="container d-flex justify-content-between">
+            <a class="navbar-brand" href="dashboard.html"><i class="bi bi-chevron-left"></i> ຈັດການຍອດຂາຍສາຂາ 2</a>
+            <div class="text-white-50 small" id="current-view-label">ໂໝດ: ລາຍວັນ</div>
         </div>
     </nav>
 
     <div class="container py-4">
-        <div id="history-container">
-            <div class="text-center p-5 text-muted">เลือกวันที่เพื่อดูรายการขาย...</div>
+        <div class="text-center mb-3">
+            <div class="nav-report">
+                <button class="btn-mode active" id="btn-day" onclick="switchMode('day')">ລາຍວັນ</button>
+                <button class="btn-mode" id="btn-month" onclick="switchMode('month')">ລາຍເດືອນ</button>
+                <button class="btn-mode" id="btn-year" onclick="switchMode('year')">ລາຍປີ</button>
+            </div>
+        </div>
+
+        <div class="row mb-4 justify-content-center">
+            <div class="col-auto">
+                <input type="date" id="dateInput" class="form-control shadow-sm" onchange="fetchData()">
+                <input type="month" id="monthInput" class="form-control d-none shadow-sm" onchange="fetchData()">
+                <select id="yearInput" class="form-select d-none shadow-sm" onchange="fetchData()">
+                    <option value="2025">2025</option>
+                    <option value="2026" selected>2026</option>
+                    <option value="2027">2027</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="report-card">
+            <div class="row align-items-center">
+                <div class="col-7">
+                    <span class="opacity-75">ຍອດລວມເງິນສົດ</span>
+                    <h1 class="display-6 fw-bold mb-0" id="totalDisplay">0</h1>
+                    <p class="mb-0 small"><i class="bi bi-box-seam"></i>  ຂາຍໄປທັ້ງຫມົດ <span id="countDisplay">0</span>
+                        ລາຍການ</p>
+                </div>
+                <div class="col-5 text-end">
+                    <i class="bi bi-graph-up-arrow fs-1 opacity-25"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0"><i class="bi bi-list-ul"></i> ລາຍລະອຽດການຂາຍ</h6>
+            <span class="badge bg-light text-dark border">ແກ້ໄຂໄດ້ສະເພາະລາຍວັນເທົ່ານັ້ນ</span>
+        </div>
+
+        <div id="list-container">
         </div>
     </div>
 
     <script>
-        // --- Config ---
-        const firebaseConfig = { /* ใส่ Config ของคุณ */ };
+        // --- 1. CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyC8b0h8yyTo5th6UMrI4_dKUB1ZnvCwZBw",
+            authDomain: "fuji-mobile-shop.firebaseapp.com",
+            databaseURL: "https://fuji-mobile-shop-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "fuji-mobile-shop",
+            storageBucket: "fuji-mobile-shop.appspot.com",
+            messagingSenderId: "753053073037",
+            appId: "1:753053073037:web:7c9cb46e055b91a4cf2cc4"
+        };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const ADMIN_PASS = "Zxc12345_";
 
-        // ตั้งค่าวันที่ปัจจุบันเป็นค่าเริ่มต้น
-        document.getElementById('filter-date').value = new Date().toISOString().split('T')[0];
+        let currentMode = 'day';
+        document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+        document.getElementById('monthInput').value = new Date().toISOString().slice(0, 7);
 
-        function loadHistory(date) {
-            if (!date) return;
-            db.ref('sales/' + date).on('value', (snapshot) => {
-                const container = document.getElementById('history-container');
-                container.innerHTML = "";
+        // --- 2. ฟังก์ชันสลับโหมด ---
+        function switchMode(mode) {
+            currentMode = mode;
+            // จัดการ UI ปุ่ม
+            document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + mode).classList.add('active');
 
-                if (!snapshot.exists()) {
-                    container.innerHTML = '<div class="text-center mt-5">ไม่มียอดขายในวันที่เลือก</div>';
-                    return;
-                }
+            // สลับ Input
+            document.getElementById('dateInput').classList.toggle('d-none', mode !== 'day');
+            document.getElementById('monthInput').classList.toggle('d-none', mode !== 'month');
+            document.getElementById('yearInput').classList.toggle('d-none', mode !== 'year');
 
-                snapshot.forEach((child) => {
-                    const sale = child.val();
-                    const saleId = child.key;
-                    container.innerHTML += `
-                    <div class="card history-card shadow-sm p-3">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span class="date-badge mb-2 d-inline-block">${sale.time}</span>
-                                <h6 class="fw-bold mb-1">${sale.name}</h6>
-                                <p class="small text-muted mb-0">จำนวน: ${sale.qty} | ราคารวม: <span class="text-danger fw-bold">${sale.total.toLocaleString()}.-</span></p>
-                            </div>
-                            <div class="btn-group">
+            document.getElementById('current-view-label').innerText = "โหมด: " + (mode === 'day' ? 'รายวัน' : mode === 'month' ? 'รายเดือน' : 'รายปี');
+            fetchData();
+        }
+
+        // --- 3. ดึงข้อมูล ---
+        function fetchData() {
+            const container = document.getElementById('list-container');
+            container.innerHTML = '<div class="text-center p-5 text-muted">กำลังโหลดข้อมูล...</div>';
+
+            db.ref('sales').on('value', (snapshot) => {
+                let total = 0;
+                let count = 0;
+                let html = "";
+                const allSales = snapshot.val() || {};
+
+                let filterKey = "";
+                if (currentMode === 'day') filterKey = document.getElementById('dateInput').value;
+                if (currentMode === 'month') filterKey = document.getElementById('monthInput').value;
+                if (currentMode === 'year') filterKey = document.getElementById('yearInput').value;
+
+                // กรองข้อมูลตามวันที่เลือก
+                Object.keys(allSales).sort().reverse().forEach(date => {
+                    if (date.startsWith(filterKey)) {
+                        Object.keys(allSales[date]).forEach(saleId => {
+                            const item = allSales[date][saleId];
+                            total += parseFloat(item.total || 0);
+                            count++;
+
+                            // สร้างปุ่ม (จะแสดงเฉพาะโหมดรายวันเพื่อให้จัดการได้ง่าย)
+                            const actionButtons = `
+                            <div class="btn-group ms-2">
                                 <button class="btn btn-outline-warning btn-sm" onclick="editSale('${date}', '${saleId}')"><i class="bi bi-pencil"></i></button>
                                 <button class="btn btn-outline-danger btn-sm" onclick="deleteSale('${date}', '${saleId}')"><i class="bi bi-trash"></i></button>
+                            </div>`;
+
+                            html += `
+                        <div class="card history-card p-3 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="badge bg-light text-primary border me-2">${item.time || ''}</span>
+                                        <small class="text-muted">${item.fullDate || date}</small>
+                                    </div>
+                                    <h6 class="fw-bold mb-1">${item.name}</h6>
+                                    <small class="text-muted">จำนวน: ${item.qty} | ยอดเงิน: <span class="text-danger fw-bold">${parseFloat(item.total).toLocaleString()}.-</span></small>
+                                </div>
+                                ${actionButtons}
                             </div>
-                        </div>
-                    </div>`;
+                        </div>`;
+                        });
+                    }
                 });
+
+                document.getElementById('totalDisplay').innerText = total.toLocaleString() + " ฿";
+                document.getElementById('countDisplay').innerText = count;
+                container.innerHTML = html || '<div class="text-center p-5 opacity-50">ไม่พบรายการขาย</div>';
             });
         }
 
-        // --- ระบบลบรายการ (พร้อมคืนสต็อก) ---
+        // --- 4. ฟังก์ชันลบ (คืนสต็อก) ---
         async function deleteSale(date, saleId) {
-            const pass = prompt("🔐 กรุณาป้อนรหัสผ่านเพื่อลบรายการขาย:");
+            const pass = prompt("🔐 กรุณาป้อนรหัสผ่านเพื่อลบ:");
             if (pass !== ADMIN_PASS) return alert("รหัสผ่านไม่ถูกต้อง!");
 
-            if (confirm("การลบรายการนี้จะทำให้สต็อกสินค้าถูกดึงกลับเข้าคลัง ยืนยันหรือไม่?")) {
+            if (confirm("ยืนยันการลบรายการ? สินค้าจะถูกคืนเข้าคลังโดยอัตโนมัติ")) {
                 const saleRef = db.ref(`sales/${date}/${saleId}`);
-                const snapshot = await saleRef.once('value');
-                const saleData = snapshot.val();
+                const saleSnap = await saleRef.once('value');
+                const sale = saleSnap.val();
 
-                if (saleData && saleData.qr) {
-                    // 1. คืนค่าสต็อก
-                    const prodRef = db.ref(`products/${saleData.qr}/qty`);
+                if (sale && sale.qr) {
+                    // คืนสต็อก
+                    const prodRef = db.ref(`products/${sale.qr}/qty`);
                     const prodSnap = await prodRef.once('value');
-                    const currentQty = prodSnap.val() || 0;
-                    await prodRef.set(currentQty + saleData.qty);
-
-                    // 2. ลบประวัติขาย
+                    await prodRef.set(parseInt(prodSnap.val() || 0) + parseInt(sale.qty));
+                    // ลบประวัติ
                     await saleRef.remove();
-                    alert("🗑️ ลบรายการและคืนสต็อกเรียบร้อยแล้ว");
+                    alert("🗑️ ลบรายการและคืนสต็อกสำเร็จ");
                 }
             }
         }
 
-        // --- ระบบแก้ไข (เฉพาะยอดเงิน/จำนวน) ---
+        // --- 5. ฟังก์ชันแก้ไข (คืนสต็อกส่วนต่าง) ---
         async function editSale(date, saleId) {
             const pass = prompt("🔐 กรุณาป้อนรหัสผ่านเพื่อแก้ไข:");
             if (pass !== ADMIN_PASS) return alert("รหัสผ่านไม่ถูกต้อง!");
 
             const saleRef = db.ref(`sales/${date}/${saleId}`);
-            const snapshot = await saleRef.once('value');
-            const saleData = snapshot.val();
+            const saleSnap = await saleRef.once('value');
+            const sale = saleSnap.val();
 
-            const newQty = prompt("แก้ไขจำนวนที่ขาย:", saleData.qty);
-            if (newQty === null) return;
+            const newQty = prompt("ป้อนจำนวนใหม่:", sale.qty);
+            if (newQty === null || newQty === "") return;
 
-            // คำนวณความต่างสต็อก
-            const diff = parseInt(newQty) - saleData.qty;
+            const diff = parseInt(newQty) - parseInt(sale.qty);
 
-            // อัปเดตข้อมูล
+            // อัปเดตสต็อกในห้อง products
+            const prodRef = db.ref(`products/${sale.qr}/qty`);
+            const prodSnap = await prodRef.once('value');
+            await prodRef.set(parseInt(prodSnap.val() || 0) - diff);
+
+            // อัปเดตรายการในห้อง sales
             await saleRef.update({
                 qty: parseInt(newQty),
-                total: saleData.price * parseInt(newQty)
+                total: parseFloat(sale.price) * parseInt(newQty)
             });
 
-            // อัปเดตสต็อกในฐานข้อมูล
-            const prodRef = db.ref(`products/${saleData.qr}/qty`);
-            const prodSnap = await prodRef.once('value');
-            await prodRef.set(prodSnap.val() - diff);
-
-            alert("✅ อัปเดตข้อมูลและสต็อกเรียบร้อย");
+            alert("✅ แก้ไขข้อมูลและปรับสต็อกเรียบร้อย");
         }
 
         // โหลดครั้งแรก
-        loadHistory(document.getElementById('filter-date').value);
+        fetchData();
     </script>
 </body>
 
