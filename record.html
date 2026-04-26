@@ -26,7 +26,7 @@
 
         .form-control:focus {
             border-color: #198754;
-            box-shadow: 0 0 0 0.25 row rgba(25, 135, 84, 0.25);
+            box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
         }
     </style>
 </head>
@@ -49,8 +49,8 @@
                 <label class="small text-success fw-bold">ລະຫັດບາໂຄດ / ລະຫັດສິນຄ້າ</label>
                 <div class="input-group">
                     <span class="input-group-text bg-white"><i class="bi bi-upc-scan"></i></span>
-                    <input type="text" id="qr" class="form-control form-control-lg"
-                        placeholder="สแกนหรือพิมพ์รหัสที่นี่..." oninput="autoSearch(this.value)">
+                    <input type="text" id="qr" class="form-control form-control-lg" placeholder="สแกนหรือพิมพ์รหัส"
+                        oninput="autoSearch(this.value)">
                 </div>
             </div>
 
@@ -61,8 +61,9 @@
 
             <div class="row g-2 mb-3">
                 <div class="col-6">
-                    <label class="small text-muted">ລາຄາຂາຍ</label>
-                    <input type="number" id="price" class="form-control" placeholder="0.00">
+                    <label class="small text-muted text-primary fw-bold">ລາຄາຂາຍ (เงิน)</label>
+                    <input type="text" id="price" class="form-control" inputmode="decimal" placeholder="0"
+                        oninput="formatDisplay(this)">
                 </div>
                 <div class="col-6">
                     <label class="small text-muted">ຈຳນວນທີເພິ່ມ</label>
@@ -77,7 +78,6 @@
     </div>
 
     <script>
-        // --- Firebase Config ---
         const firebaseConfig = {
             apiKey: "AIzaSyC8b0h8yyTo5th6UMrI4_dKUB1ZnvCwZBw",
             authDomain: "fuji-mobile-shop.firebaseapp.com",
@@ -90,69 +90,76 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- ตั้งค่า Scanner ให้เร็วขึ้น ---
-        const scanner = new Html5Qrcode("reader");
-        const config = {
-            fps: 30, // เพิ่มความเร็วจาก 15 เป็น 30
-            qrbox: { width: 280, height: 180 },
-            aspectRatio: 1.0,
-            disableFlip: true // ไม่ต้องกลับภาพ ช่วยให้ประมวลผลเร็วขึ้น
-        };
+        // ฟังก์ชันสำหรับใส่คอมม่าตอนพิมพ์ (Format อัตโนมัติ)
+        function formatDisplay(input) {
+            // เก็บตำแหน่ง Cursor ไว้ก่อน format เพื่อไม่ให้กระโดดไปหลังสุด
+            let cursorPosition = input.selectionStart;
+            let oldLength = input.value.length;
 
-        scanner.start({ facingMode: "environment" }, config, (txt) => {
+            let val = input.value.replace(/[^\d]/g, ""); // ลบทุกอย่างที่ไม่ใช่ตัวเลข
+            if (val === "") {
+                input.value = "";
+                return;
+            }
+
+            // ใส่คอมม่าทุก 3 หลัก
+            input.value = val.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+            // คืนค่าตำแหน่ง Cursor
+            let newLength = input.value.length;
+            input.setSelectionRange(cursorPosition + (newLength - oldLength), cursorPosition + (newLength - oldLength));
+        }
+
+        // ฟังก์ชันสำหรับแปลงตัวเลขให้มีคอมม่า (ใช้ตอนดึงข้อมูลเก่าจาก Firebase)
+        function numberWithCommas(x) {
+            if (x === undefined || x === null || x === "") return "";
+            let val = x.toString().replace(/[^\d]/g, "");
+            return val.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        const scanner = new Html5Qrcode("reader");
+        scanner.start({ facingMode: "environment" }, { fps: 30, qrbox: { width: 280, height: 180 }, aspectRatio: 1.0, disableFlip: true }, (txt) => {
             document.getElementById('qr').value = txt;
-            autoSearch(txt); // ค้นหาข้อมูลทันทีที่สแกนติด
-            // สั่นเตือนเบาๆ เมื่อสแกนติด (ถ้ามือถือรองรับ)
-            if (navigator.vibrate) navigator.vibrate(100);
+            autoSearch(txt);
         });
 
-        // --- ระบบค้นหาข้อมูลอัตโนมัติ (พิมพ์ไปค้นไป) ---
         function autoSearch(txt) {
-            if (txt.length < 3) return; // พิมพ์อย่างน้อย 3 ตัวค่อยหา เพื่อประหยัดเน็ต
-
+            if (txt.length < 3) return;
             db.ref('products/' + txt).once('value', s => {
                 const data = s.val();
                 if (data) {
                     document.getElementById('name').value = data.name || "";
-                    document.getElementById('price').value = data.price || "";
-                    // ไฮไลท์ช่องจำนวนให้พร้อมพิมพ์ต่อ
+
+                    // แสดงราคาเก่าพร้อมคอมม่าทันทีที่ค้นเจอ
+                    let oldPrice = data.price || "";
+                    document.getElementById('price').value = numberWithCommas(oldPrice);
+
                     document.getElementById('qty').focus();
                 }
             });
         }
 
-        // --- บันทึกข้อมูล ---
         function save() {
             const qr = document.getElementById('qr').value;
             const name = document.getElementById('name').value;
-            const price = document.getElementById('price').value;
-            const qtyInput = document.getElementById('qty').value;
-            const qty = parseInt(qtyInput || 0);
+            // ลบคอมม่าออกให้เหลือแต่ตัวเลขล้วนๆ ก่อนส่งไปบันทึก (60,000 -> 60000)
+            const price = document.getElementById('price').value.replace(/,/g, "");
+            const qty = parseInt(document.getElementById('qty').value || 0);
 
-            if (!qr || !name || qty <= 0) {
-                alert("กรุณากรอกรหัสสินค้า ชื่อ และจำนวนให้ถูกต้อง");
-                return;
-            }
+            if (!qr || !name || qty <= 0) return alert("กรุณากรอกข้อมูลให้ครบถ้วน");
 
             db.ref('products/' + qr).once('value').then(s => {
-                const oldData = s.val();
-                const oldQty = oldData ? parseInt(oldData.qty || 0) : 0;
-
-                db.ref('products/' + qr).set({
+                const oldQty = s.val() ? parseInt(s.val().qty || 0) : 0;
+                db.ref('products/' + qr).update({
                     name: name,
                     price: price,
                     qty: oldQty + qty,
                     lastUpdate: new Date().toLocaleString()
-                })
-                    .then(() => {
-                        alert("✅ บันทึกสต็อกสินค้าเรียบร้อย!");
-                        // ล้างข้อมูลเพื่อรอรายการถัดไป
-                        document.getElementById('qr').value = "";
-                        document.getElementById('name').value = "";
-                        document.getElementById('price').value = "";
-                        document.getElementById('qty').value = "";
-                        document.getElementById('qr').focus();
-                    });
+                }).then(() => {
+                    alert("✅ ບັນທຶກສຳເລັດ!");
+                    ["qr", "name", "price", "qty"].forEach(id => document.getElementById(id).value = "");
+                    document.getElementById('qr').focus();
+                });
             });
         }
     </script>
