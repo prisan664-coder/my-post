@@ -4,84 +4,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sale - Fuji</title>
+    <title>Fuji Mobile - ระบบขายสินค้า</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body {
-            background: #fff5f5;
+            background: #f8f9fa;
             font-family: 'Kanit', sans-serif;
+            padding-bottom: 100px;
+        }
+
+        .header-sale {
+            background: #0d6efd;
+            color: white;
+            padding: 15px;
+            border-radius: 0 0 20px 20px;
         }
 
         #reader {
             width: 100%;
             border-radius: 15px;
             overflow: hidden;
+            background: #000;
         }
 
-        .info-box {
-            background: #fff;
-            border-left: 5px solid #0d6efd;
-            padding: 15px;
+        .cart-item {
+            background: white;
             border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-left: 5px solid #0d6efd;
+        }
+
+        .sticky-bottom-total {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 15px;
+            box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
         }
     </style>
 </head>
 
 <body>
-    <div class="p-3 bg-primary text-white d-flex justify-content-between">
-        <span><a href="dashboard.html" class="text-white text-decoration-none">← กลับ</a></span>
-        <strong>คีย์ขายสินค้า</strong>
-        <span></span>
+
+    <div class="header-sale shadow-sm mb-3">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="dashboard.html" class="text-white text-decoration-none"><i class="bi bi-arrow-left"></i> กลับ</a>
+            <h5 class="mb-0">คีย์ขายสินค้า (Fuji Mobile)</h5>
+            <button class="btn btn-sm btn-light" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i>
+                รีเซ็ต</button>
+        </div>
     </div>
 
-    <div class="container py-3">
-        <div id="reader" class="mb-3 shadow-sm"></div>
-        <input type="text" id="qr-code" class="form-control mb-3 text-center fs-4" placeholder="รหัสที่สแกนได้"
-            readonly>
+    <div class="container">
+        <div class="card p-2 border-0 shadow-sm mb-3">
+            <div id="reader"></div>
+            <div class="input-group mt-2">
+                <input type="text" id="manual-qr" class="form-control text-center" placeholder="รหัสสินค้า">
+                <button class="btn btn-primary"
+                    onclick="searchProduct(document.getElementById('manual-qr').value)">ตกลง</button>
+            </div>
+        </div>
 
-        <div id="result" class="info-box d-none shadow-sm">
-            <h4 id="res-name" class="mb-1"></h4>
-            <h3 id="res-price" class="text-danger"></h3>
-            <p id="res-stock" class="mb-0 text-muted"></p>
-            <button class="btn btn-primary btn-lg w-100 mt-3" onclick="sell()">ยืนยันขาย (ลดสต็อก)</button>
+        <h6><i class="bi bi-cart3"></i> รายการขายในบิลนี้:</h6>
+        <div id="cart-list">
+            <p class="text-center text-muted py-4">ยังไม่มีสินค้าในตะกร้า<br>กรุณาสแกนบาร์โค้ด</p>
+        </div>
+    </div>
+
+    <div class="sticky-bottom-total">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="h5 mb-0">ยอดรวมทั้งหมด:</span>
+                <span class="h3 mb-0 text-primary fw-bold" id="grand-total">0</span>
+            </div>
+            <button class="btn btn-success btn-lg w-100 py-3 rounded-pill shadow" onclick="checkout()">
+                <i class="bi bi-cash-stack"></i> ยืนยันการขายและรับเงิน
+            </button>
         </div>
     </div>
 
     <script>
-        // ใช้ Firebase Config เดียวกัน
+        // --- 1. CONFIG (ใช้ Config ของคุณ) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyC8b0h8yyTo5th6UMrI4_dKUB1ZnvCwZBw",
+            authDomain: "fuji-mobile-shop.firebaseapp.com",
+            databaseURL: "https://fuji-mobile-shop-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "fuji-mobile-shop",
+            storageBucket: "fuji-mobile-shop.appspot.com",
+            messagingSenderId: "753053073037",
+            appId: "1:753053073037:web:7c9cb46e055b91a4cf2cc4"
+        };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        let cart = []; // เก็บรายการที่กำลังจะขาย
+
+        // --- 2. SCANNER ---
         const scanner = new Html5Qrcode("reader");
         scanner.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, (txt) => {
-            document.getElementById('qr-code').value = txt;
-            db.ref('products/' + txt).once('value', s => {
-                const d = s.val();
-                if (d) {
-                    document.getElementById('result').classList.remove('d-none');
-                    document.getElementById('res-name').innerText = d.name;
-                    document.getElementById('res-price').innerText = d.price + " บาท";
-                    document.getElementById('res-stock').innerText = "คงเหลือในร้าน: " + d.qty + " ชิ้น";
-                } else { alert("ไม่มีสินค้านี้ในสต็อก!"); }
-            });
+            searchProduct(txt);
+            // สแกนเสร็จให้หยุดรอแป๊บนึงเพื่อไม่ให้สแกนซ้ำรัวๆ
+            scanner.pause();
+            setTimeout(() => scanner.resume(), 2000);
         });
 
-        function sell() {
-            const qr = document.getElementById('qr-code').value;
-            db.ref('products/' + qr).once('value').then(s => {
+        // --- 3. SEARCH & ADD TO CART ---
+        function searchProduct(qr) {
+            if (!qr) return;
+            db.ref('products/' + qr).once('value', s => {
                 const d = s.val();
-                if (d && d.qty > 0) {
-                    db.ref('products/' + qr + '/qty').set(d.qty - 1);
-                    const date = new Date().toISOString().split('T')[0];
-                    db.ref('sales/' + date).push({ name: d.name, price: d.price, time: new Date().toLocaleTimeString() });
-                    alert("บันทึกการขายเรียบร้อย!"); location.reload();
+                if (d) {
+                    if (d.qty <= 0) {
+                        alert("สินค้าชิ้นนี้หมดสต็อกแล้ว!");
+                        return;
+                    }
+                    addToCart(qr, d);
+                } else {
+                    alert("ไม่พบสินค้าในระบบ!");
                 }
             });
         }
+
+        function addToCart(qr, product) {
+            // เช็คว่าในตะกร้ามีสินค้านี้หรือยัง
+            const found = cart.find(item => item.qr === qr);
+            if (found) {
+                if (found.qty < product.qty) {
+                    found.qty += 1;
+                } else {
+                    alert("ไม่สามารถเพิ่มได้เกินจำนวนสต็อกที่มี!");
+                }
+            } else {
+                cart.push({ qr: qr, name: product.name, price: product.price, qty: 1, stock: product.qty });
+            }
+            updateCartUI();
+        }
+
+        // --- 4. UPDATE UI ---
+        function updateCartUI() {
+            const list = document.getElementById('cart-list');
+            list.innerHTML = "";
+            let grandTotal = 0;
+
+            cart.forEach((item, index) => {
+                const subTotal = item.price * item.qty;
+                grandTotal += subTotal;
+                list.innerHTML += `
+                <div class="cart-item shadow-sm">
+                    <div class="d-flex justify-content-between">
+                        <strong class="text-dark">${item.name}</strong>
+                        <button class="btn btn-sm text-danger" onclick="removeItem(${index})"><i class="bi bi-trash"></i></button>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary" onclick="changeQty(${index}, -1)">-</button>
+                            <span class="px-3 border d-flex align-items-center">${item.qty}</span>
+                            <button class="btn btn-outline-secondary" onclick="changeQty(${index}, 1)">+</button>
+                        </div>
+                        <div class="text-primary fw-bold">${subTotal.toLocaleString()} บ.</div>
+                    </div>
+                </div>
+            `;
+            });
+
+            document.getElementById('grand-total').innerText = grandTotal.toLocaleString();
+        }
+
+        function changeQty(index, amount) {
+            const item = cart[index];
+            if (amount > 0 && item.qty < item.stock) {
+                item.qty += 1;
+            } else if (amount < 0 && item.qty > 1) {
+                item.qty -= 1;
+            }
+            updateCartUI();
+        }
+
+        function removeItem(index) {
+            cart.splice(index, 1);
+            updateCartUI();
+        }
+
+        // --- 5. CHECKOUT & CUT STOCK ---
+        async function checkout() {
+            if (cart.length === 0) return alert("ยังไม่มีสินค้าในตะกร้า!");
+
+            if (confirm(`ยืนยันการขายทั้งหมดรวม ${document.getElementById('grand-total').innerText} บาท?`)) {
+                const date = new Date().toISOString().split('T')[0];
+                const time = new Date().toLocaleTimeString();
+
+                for (let item of cart) {
+                    // 1. ตัดสต็อก
+                    const newStock = item.stock - item.qty;
+                    await db.ref('products/' + item.qr + '/qty').set(newStock);
+
+                    // 2. บันทึกประวัติการขาย
+                    await db.ref('sales/' + date).push({
+                        name: item.name,
+                        price: item.price,
+                        qty: item.qty,
+                        total: item.price * item.qty,
+                        time: time
+                    });
+                }
+
+                alert("✅ ขายสำเร็จและตัดสต็อกเรียบร้อย!");
+                location.reload();
+            }
+        }
     </script>
+
 </body>
 
 </html>
