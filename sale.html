@@ -4,124 +4,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Report & Manage - Fuji Mobile</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <title>Fuji Fast POS - ป้อนรหัส & สแกน</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
+        :root {
+            --fuji-primary: #0d6efd;
+            --glass: rgba(255, 255, 255, 0.95);
+        }
+
         body {
-            background: #f4f7f6;
+            background: #f0f2f5;
             font-family: 'Kanit', sans-serif;
-            padding-bottom: 50px;
+            min-height: 100vh;
+            padding-bottom: 150px;
         }
 
-        .report-card {
-            border: none;
-            border-radius: 20px;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 20px rgba(42, 82, 152, 0.2);
+        .header-pos {
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            padding: 15px 0;
         }
 
-        .history-card {
-            border: none;
+        #reader {
+            width: 100%;
             border-radius: 15px;
-            margin-bottom: 12px;
-            transition: 0.2s;
-            background: white;
-            border-left: 5px solid #2a5298;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            background: #000;
         }
 
-        .nav-report {
-            background: white;
-            border-radius: 50px;
-            padding: 5px;
-            margin-bottom: 20px;
-            display: inline-flex;
-            border: 1px solid #ddd;
+        .input-focus {
+            border: 2px solid var(--fuji-primary) !important;
+            box-shadow: 0 0 10px rgba(13, 110, 253, 0.2);
         }
 
-        .btn-mode {
-            border-radius: 50px;
+        .cart-item {
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
             border: none;
-            padding: 8px 20px;
-            font-weight: 500;
-            transition: 0.3s;
-            color: #666;
-            background: transparent;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
 
-        .btn-mode.active {
-            background: #2a5298;
-            color: white;
-        }
-
-        .navbar {
-            background: #1a1d20 !important;
+        .footer-total {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-top: 2px solid #eee;
+            z-index: 1000;
         }
     </style>
 </head>
 
 <body>
 
-    <nav class="navbar navbar-dark sticky-top shadow">
-        <div class="container d-flex justify-content-between">
-            <a class="navbar-brand" href="dashboard.html"><i class="bi bi-chevron-left"></i> ຈັດການຍອດຂາຍສາຂາ 2</a>
-            <div class="text-white-50 small" id="current-view-label">ໂໝດ: ລາຍວັນ</div>
+    <div class="header-pos mb-3 shadow-sm">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="dashboard.html" class="btn btn-outline-secondary btn-sm"><i class="bi bi-house"></i></a>
+            <h5 class="fw-bold mb-0">ขายสินค้า (ป้อนรหัส/สแกน)</h5>
+            <button class="btn btn-sm btn-danger" onclick="clearCart()">ล้างตะกร้า</button>
         </div>
-    </nav>
+    </div>
 
-    <div class="container py-4">
-        <div class="text-center mb-3">
-            <div class="nav-report">
-                <button class="btn-mode active" id="btn-day" onclick="switchMode('day')">ລາຍວັນ</button>
-                <button class="btn-mode" id="btn-month" onclick="switchMode('month')">ລາຍເດືອນ</button>
-                <button class="btn-mode" id="btn-year" onclick="switchMode('year')">ລາຍປີ</button>
+    <div class="container">
+        <div class="card p-3 border-0 shadow-sm mb-3 rounded-4">
+            <div id="reader" class="mb-3"></div>
+
+            <div class="input-group">
+                <span class="input-group-text bg-primary text-white border-0"><i class="bi bi-upc"></i></span>
+                <input type="text" id="barcode-input" class="form-control form-control-lg border-0 bg-light input-focus"
+                    placeholder="ป้อนรหัสบาร์โค้ดที่นี่..." autofocus>
+                <button class="btn btn-primary" onclick="manualAdd()">เพิ่ม</button>
             </div>
+            <small class="text-muted mt-2 text-center d-block">พิมพ์รหัสแล้วกด Enter
+                หรือใช้เครื่องสแกนยิงเข้าช่องนี้ได้เลย</small>
         </div>
 
-        <div class="row mb-4 justify-content-center">
-            <div class="col-auto">
-                <input type="date" id="dateInput" class="form-control shadow-sm" onchange="fetchData()">
-                <input type="month" id="monthInput" class="form-control d-none shadow-sm" onchange="fetchData()">
-                <select id="yearInput" class="form-select d-none shadow-sm" onchange="fetchData()">
-                    <option value="2025">2025</option>
-                    <option value="2026" selected>2026</option>
-                    <option value="2027">2027</option>
-                </select>
-            </div>
+        <div class="d-flex justify-content-between px-2 mb-2">
+            <span class="fw-bold text-secondary">รายการสินค้า</span>
+            <span class="badge bg-dark" id="item-count">0 ชิ้น</span>
         </div>
 
-        <div class="report-card">
-            <div class="row align-items-center">
-                <div class="col-7">
-                    <span class="opacity-75">ຍອດລວມເງິນສົດ</span>
-                    <h1 class="display-6 fw-bold mb-0" id="totalDisplay">0</h1>
-                    <p class="mb-0 small"><i class="bi bi-box-seam"></i>  ຂາຍໄປທັ້ງຫມົດ <span id="countDisplay">0</span>
-                        ລາຍການ</p>
+        <div id="cart-list">
+        </div>
+    </div>
+
+    <div class="footer-total">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-end mb-3">
+                <span class="text-muted">ราคารวมทั้งหมด:</span>
+                <div class="text-end">
+                    <span class="h1 fw-bold text-primary mb-0" id="grand-total">0</span>
+                    <span class="text-primary fw-bold"> บาท</span>
                 </div>
-                <div class="col-5 text-end">
-                    <i class="bi bi-graph-up-arrow fs-1 opacity-25"></i>
-                </div>
             </div>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="fw-bold mb-0"><i class="bi bi-list-ul"></i> ລາຍລະອຽດການຂາຍ</h6>
-            <span class="badge bg-light text-dark border">ແກ້ໄຂໄດ້ສະເພາະລາຍວັນເທົ່ານັ້ນ</span>
-        </div>
-
-        <div id="list-container">
+            <button class="btn btn-success w-100 py-3 rounded-3 fw-bold fs-5" onclick="checkout()">
+                <i class="bi bi-cart-check"></i> ยืนยันการขาย
+            </button>
         </div>
     </div>
 
     <script>
-        // --- 1. CONFIG ---
+        // --- 1. FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyC8b0h8yyTo5th6UMrI4_dKUB1ZnvCwZBw",
             authDomain: "fuji-mobile-shop.firebaseapp.com",
@@ -133,136 +126,149 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const ADMIN_PASS = "Zxc12345_";
 
-        let currentMode = 'day';
-        document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
-        document.getElementById('monthInput').value = new Date().toISOString().slice(0, 7);
+        let cart = [];
+        let allProducts = {};
 
-        // --- 2. ฟังก์ชันสลับโหมด ---
-        function switchMode(mode) {
-            currentMode = mode;
-            // จัดการ UI ปุ่ม
-            document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
-            document.getElementById('btn-' + mode).classList.add('active');
+        // ดึงข้อมูลสินค้าทั้งหมดมาไว้ในเครื่อง (Cache) เพื่อให้ค้นหาได้ทันทีไม่ต้องรอเน็ต
+        db.ref('products').on('value', snap => {
+            allProducts = snap.val() || {};
+            console.log("Database Synced");
+        });
 
-            // สลับ Input
-            document.getElementById('dateInput').classList.toggle('d-none', mode !== 'day');
-            document.getElementById('monthInput').classList.toggle('d-none', mode !== 'month');
-            document.getElementById('yearInput').classList.toggle('d-none', mode !== 'year');
+        // --- 2. MANUAL INPUT LOGIC ---
+        const barcodeInput = document.getElementById('barcode-input');
 
-            document.getElementById('current-view-label').innerText = "โหมด: " + (mode === 'day' ? 'รายวัน' : mode === 'month' ? 'รายเดือน' : 'รายปี');
-            fetchData();
-        }
+        // เมื่อกด Enter ในช่องป้อนรหัส
+        barcodeInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                manualAdd();
+            }
+        });
 
-        // --- 3. ดึงข้อมูล ---
-        function fetchData() {
-            const container = document.getElementById('list-container');
-            container.innerHTML = '<div class="text-center p-5 text-muted">กำลังโหลดข้อมูล...</div>';
-
-            db.ref('sales').on('value', (snapshot) => {
-                let total = 0;
-                let count = 0;
-                let html = "";
-                const allSales = snapshot.val() || {};
-
-                let filterKey = "";
-                if (currentMode === 'day') filterKey = document.getElementById('dateInput').value;
-                if (currentMode === 'month') filterKey = document.getElementById('monthInput').value;
-                if (currentMode === 'year') filterKey = document.getElementById('yearInput').value;
-
-                // กรองข้อมูลตามวันที่เลือก
-                Object.keys(allSales).sort().reverse().forEach(date => {
-                    if (date.startsWith(filterKey)) {
-                        Object.keys(allSales[date]).forEach(saleId => {
-                            const item = allSales[date][saleId];
-                            total += parseFloat(item.total || 0);
-                            count++;
-
-                            // สร้างปุ่ม (จะแสดงเฉพาะโหมดรายวันเพื่อให้จัดการได้ง่าย)
-                            const actionButtons = `
-                            <div class="btn-group ms-2">
-                                <button class="btn btn-outline-warning btn-sm" onclick="editSale('${date}', '${saleId}')"><i class="bi bi-pencil"></i></button>
-                                <button class="btn btn-outline-danger btn-sm" onclick="deleteSale('${date}', '${saleId}')"><i class="bi bi-trash"></i></button>
-                            </div>`;
-
-                            html += `
-                        <div class="card history-card p-3 shadow-sm">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <div class="d-flex align-items-center mb-1">
-                                        <span class="badge bg-light text-primary border me-2">${item.time || ''}</span>
-                                        <small class="text-muted">${item.fullDate || date}</small>
-                                    </div>
-                                    <h6 class="fw-bold mb-1">${item.name}</h6>
-                                    <small class="text-muted">จำนวน: ${item.qty} | ยอดเงิน: <span class="text-danger fw-bold">${parseFloat(item.total).toLocaleString()}.-</span></small>
-                                </div>
-                                ${actionButtons}
-                            </div>
-                        </div>`;
-                        });
+        function manualAdd() {
+            const code = barcodeInput.value.trim();
+            if (code) {
+                const product = allProducts[code];
+                if (product) {
+                    if (product.qty <= 0) {
+                        alert("สินค้าชิ้นนี้หมดสต็อก!");
+                    } else {
+                        addItem(code, product);
+                        barcodeInput.value = ""; // ล้างช่องเพื่อให้ป้อนชิ้นต่อไปได้ทันที
+                        barcodeInput.focus();
                     }
-                });
-
-                document.getElementById('totalDisplay').innerText = total.toLocaleString() + " ฿";
-                document.getElementById('countDisplay').innerText = count;
-                container.innerHTML = html || '<div class="text-center p-5 opacity-50">ไม่พบรายการขาย</div>';
-            });
-        }
-
-        // --- 4. ฟังก์ชันลบ (คืนสต็อก) ---
-        async function deleteSale(date, saleId) {
-            const pass = prompt("🔐 กรุณาป้อนรหัสผ่านเพื่อลบ:");
-            if (pass !== ADMIN_PASS) return alert("รหัสผ่านไม่ถูกต้อง!");
-
-            if (confirm("ยืนยันการลบรายการ? สินค้าจะถูกคืนเข้าคลังโดยอัตโนมัติ")) {
-                const saleRef = db.ref(`sales/${date}/${saleId}`);
-                const saleSnap = await saleRef.once('value');
-                const sale = saleSnap.val();
-
-                if (sale && sale.qr) {
-                    // คืนสต็อก
-                    const prodRef = db.ref(`products/${sale.qr}/qty`);
-                    const prodSnap = await prodRef.once('value');
-                    await prodRef.set(parseInt(prodSnap.val() || 0) + parseInt(sale.qty));
-                    // ลบประวัติ
-                    await saleRef.remove();
-                    alert("🗑️ ลบรายการและคืนสต็อกสำเร็จ");
+                } else {
+                    alert("ไม่พบรหัสสินค้านี้ในระบบ!");
                 }
             }
         }
 
-        // --- 5. ฟังก์ชันแก้ไข (คืนสต็อกส่วนต่าง) ---
-        async function editSale(date, saleId) {
-            const pass = prompt("🔐 กรุณาป้อนรหัสผ่านเพื่อแก้ไข:");
-            if (pass !== ADMIN_PASS) return alert("รหัสผ่านไม่ถูกต้อง!");
+        // --- 3. CAMERA SCANNER (ความเร็วสูง) ---
+        const html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start({ facingMode: "environment" }, { fps: 25, qrbox: 250 }, (txt) => {
+            const product = allProducts[txt];
+            if (product && product.qty > 0) {
+                addItem(txt, product);
+                // ป้องกันการสแกนซ้ำรัวๆ
+                html5QrCode.pause();
+                setTimeout(() => html5QrCode.resume(), 1500);
+            }
+        });
 
-            const saleRef = db.ref(`sales/${date}/${saleId}`);
-            const saleSnap = await saleRef.once('value');
-            const sale = saleSnap.val();
-
-            const newQty = prompt("ป้อนจำนวนใหม่:", sale.qty);
-            if (newQty === null || newQty === "") return;
-
-            const diff = parseInt(newQty) - parseInt(sale.qty);
-
-            // อัปเดตสต็อกในห้อง products
-            const prodRef = db.ref(`products/${sale.qr}/qty`);
-            const prodSnap = await prodRef.once('value');
-            await prodRef.set(parseInt(prodSnap.val() || 0) - diff);
-
-            // อัปเดตรายการในห้อง sales
-            await saleRef.update({
-                qty: parseInt(newQty),
-                total: parseFloat(sale.price) * parseInt(newQty)
-            });
-
-            alert("✅ แก้ไขข้อมูลและปรับสต็อกเรียบร้อย");
+        // --- 4. CART & UI ---
+        function addItem(qr, p) {
+            const idx = cart.findIndex(item => item.qr === qr);
+            if (idx > -1) {
+                if (cart[idx].qty < p.qty) {
+                    cart[idx].qty++;
+                } else {
+                    alert("จำนวนในสต็อกไม่พอขาย!");
+                }
+            } else {
+                cart.unshift({ qr: qr, name: p.name, price: p.price, qty: 1, stock: p.qty });
+            }
+            renderCart();
         }
 
-        // โหลดครั้งแรก
-        fetchData();
+        function renderCart() {
+            const list = document.getElementById('cart-list');
+            let total = 0;
+            let count = 0;
+            list.innerHTML = "";
+
+            cart.forEach((item, i) => {
+                total += item.price * item.qty;
+                count += item.qty;
+                list.innerHTML += `
+                <div class="cart-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold text-dark">${item.name}</div>
+                        <div class="small text-muted">รหัส: ${item.qr}</div>
+                        <div class="text-primary fw-bold">${item.price.toLocaleString()}.-</div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="btn-group btn-group-sm me-3">
+                            <button class="btn btn-light border" onclick="updateQty(${i},-1)">-</button>
+                            <span class="btn btn-white border-top border-bottom disabled text-dark" style="min-width:40px">${item.qty}</span>
+                            <button class="btn btn-light border" onclick="updateQty(${i},1)">+</button>
+                        </div>
+                        <button class="btn btn-link text-danger p-0" onclick="removeItem(${i})"><i class="bi bi-trash fs-5"></i></button>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('grand-total').innerText = total.toLocaleString();
+            document.getElementById('item-count').innerText = count + " ชิ้น";
+        }
+
+        function updateQty(i, n) {
+            if (n > 0 && cart[i].qty < cart[i].stock) cart[i].qty++;
+            else if (n < 0 && cart[i].qty > 1) cart[i].qty--;
+            renderCart();
+        }
+
+        function removeItem(i) { cart.splice(i, 1); renderCart(); }
+        function clearCart() { cart = []; renderCart(); }
+
+        // --- 5. CHECKOUT (บันทึกยอด & ตัดสต็อก) ---
+        async function checkout() {
+            if (cart.length === 0) return;
+
+            if (confirm(`ยืนยันการรับชำระเงินบิลนี้?`)) {
+                const now = new Date();
+                const dateKey = now.toISOString().split('T')[0];
+                const dateFull = now.toLocaleDateString('th-TH');
+                const timeStr = now.toLocaleTimeString('th-TH');
+
+                const updates = {};
+
+                cart.forEach(item => {
+                    updates[`/products/${item.qr}/qty`] = item.stock - item.qty;
+                    const saleRef = db.ref(`sales/${dateKey}`).push();
+                    updates[`/sales/${dateKey}/${saleRef.key}`] = {
+                        qr: item.qr,
+                        name: item.name,
+                        price: item.price,
+                        qty: item.qty,
+                        total: item.price * item.qty,
+                        fullDate: dateFull,
+                        time: timeStr
+                    };
+                });
+
+                try {
+                    await db.ref().update(updates);
+                    alert("✅ ขายสำเร็จ! สต็อกอัปเดตและบันทึกประวัติแล้ว");
+                    cart = [];
+                    renderCart();
+                    barcodeInput.focus();
+                } catch (err) {
+                    alert("เกิดข้อผิดพลาด: " + err.message);
+                }
+            }
+        }
     </script>
+
 </body>
 
 </html>
