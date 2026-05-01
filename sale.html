@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="lo">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fuji Fast POS - ป้อนรหัส & สแกน</title>
+    <title>Fuji Fast POS - ສິນຄ້າລາວ</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
@@ -37,11 +37,6 @@
             background: #000;
         }
 
-        .input-focus {
-            border: 2px solid var(--fuji-primary) !important;
-            box-shadow: 0 0 10px rgba(13, 110, 253, 0.2);
-        }
-
         .cart-item {
             background: white;
             border-radius: 12px;
@@ -70,32 +65,32 @@
     <div class="header-pos mb-3 shadow-sm">
         <div class="container d-flex justify-content-between align-items-center">
             <a href="dashboard.html" class="btn btn-outline-secondary btn-sm"><i class="bi bi-house"></i></a>
-            <h5 class="fw-bold mb-0">ขายสินค้า (ป้อนรหัส/สแกน)</h5>
-            <button class="btn btn-sm btn-danger" onclick="clearCart()">ล้างตะกร้า</button>
+            <h5 class="fw-bold mb-0">ຂາຍສິນຄ້າ (ປ້ອນລະຫັດ/ສະແກນ)</h5>
+            <button class="btn btn-sm btn-danger" onclick="clearCart()">ລ້າງກະຕ່າ</button>
         </div>
     </div>
 
     <div class="container">
         <div class="card p-3 border-0 shadow-sm mb-3 rounded-4">
+            <!-- ส่วนของกล้อง (แบบเดิมที่คุณเคยใช้) -->
             <div id="reader" class="mb-3"></div>
 
             <div class="input-group">
                 <span class="input-group-text bg-primary text-white border-0"><i class="bi bi-upc"></i></span>
-                <input type="text" id="barcode-input" class="form-control form-control-lg border-0 bg-light input-focus"
-                    placeholder="ป้อนรหัสบาร์โค้ดที่นี่..." autofocus>
-                <button class="btn btn-primary" onclick="manualAdd()">เพิ่ม</button>
+                <input type="text" id="barcode-input" class="form-control form-control-lg border-0 bg-light"
+                    placeholder="ປ້ອນລະຫັດບາໂຄດ..." autofocus>
+                <button class="btn btn-primary" onclick="manualAdd()">ເພີ່ມ</button>
             </div>
-            <small class="text-muted mt-2 text-center d-block">พิมพ์รหัสแล้วกด Enter
-                หรือใช้เครื่องสแกนยิงเข้าช่องนี้ได้เลย</small>
+            <small class="text-muted mt-2 text-center d-block">ພິມລະຫັດແລ້ວກົດ Enter ຫຼື
+                ໃຊ້ເຄື່ອງສະແກນຍິງເຂົ້າຊ່ອງນີ້ໄດ້ເລີຍ</small>
         </div>
 
         <div class="d-flex justify-content-between px-2 mb-2">
-            <span class="fw-bold text-secondary">รายการสินค้า</span>
-            <span class="badge bg-dark" id="item-count">0 ชิ้น</span>
+            <span class="fw-bold text-secondary">ລາຍການສິນຄ້າ</span>
+            <span class="badge bg-dark" id="item-count">0 ຊິ້ນ</span>
         </div>
 
-        <div id="cart-list">
-        </div>
+        <div id="cart-list"></div>
     </div>
 
     <div class="footer-total">
@@ -108,7 +103,7 @@
                 </div>
             </div>
             <button class="btn btn-success w-100 py-3 rounded-3 fw-bold fs-5" onclick="checkout()">
-                <i class="bi bi-cart-check"></i> ยืนยันการขาย
+                <i class="bi bi-cart-check"></i> ຢືນຢັນການຂາຍ
             </button>
         </div>
     </div>
@@ -130,63 +125,55 @@
         let cart = [];
         let allProducts = {};
 
-        // ดึงข้อมูลสินค้าทั้งหมดมาไว้ในเครื่อง (Cache) เพื่อให้ค้นหาได้ทันทีไม่ต้องรอเน็ต
         db.ref('products').on('value', snap => {
             allProducts = snap.val() || {};
-            console.log("Database Synced");
         });
 
-        // --- 2. MANUAL INPUT LOGIC ---
-        const barcodeInput = document.getElementById('barcode-input');
-
-        // เมื่อกด Enter ในช่องป้อนรหัส
-        barcodeInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                manualAdd();
-            }
-        });
-
-        function manualAdd() {
-            const code = barcodeInput.value.trim();
-            if (code) {
-                const product = allProducts[code];
-                if (product) {
-                    if (product.qty <= 0) {
-                        alert("สินค้าชิ้นนี้หมดสต็อก!");
-                    } else {
-                        addItem(code, product);
-                        barcodeInput.value = ""; // ล้างช่องเพื่อให้ป้อนชิ้นต่อไปได้ทันที
-                        barcodeInput.focus();
-                    }
-                } else {
-                    alert("ไม่พบรหัสสินค้านี้ในระบบ!");
-                }
-            }
-        }
-
-        // --- 3. CAMERA SCANNER (ความเร็วสูง) ---
+        // --- 2. CAMERA SCANNER (ใช้โค้ดเดิมที่คุณเคยส่งมา) ---
         const html5QrCode = new Html5Qrcode("reader");
         html5QrCode.start({ facingMode: "environment" }, { fps: 25, qrbox: 250 }, (txt) => {
             const product = allProducts[txt];
-            if (product && product.qty > 0) {
+            if (product) {
                 addItem(txt, product);
-                // ป้องกันการสแกนซ้ำรัวๆ
                 html5QrCode.pause();
                 setTimeout(() => html5QrCode.resume(), 1500);
             }
         });
 
-        // --- 4. CART & UI ---
+        // --- 3. MANUAL INPUT ---
+        function manualAdd() {
+            const code = document.getElementById('barcode-input').value.trim();
+            if (code && allProducts[code]) {
+                addItem(code, allProducts[code]);
+                document.getElementById('barcode-input').value = "";
+                document.getElementById('barcode-input').focus();
+            } else if (code) {
+                alert("ບໍ່ພົບລະຫັດສິນຄ້ານີ້!");
+            }
+        }
+
+        document.getElementById('barcode-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') manualAdd();
+        });
+
+        // --- 4. ADD ITEM & RENDER (แก้เรื่อง NaN และสกุลเงิน) ---
         function addItem(qr, p) {
             const idx = cart.findIndex(item => item.qr === qr);
+
+            // ล้างคอมม่าและแปลงเป็นตัวเลข
+            let rawPrice = (p.price_sale || p.price || "0").toString();
+            let cleanPrice = parseFloat(rawPrice.replace(/[^0-9.]/g, '')) || 0;
+            let stock = parseInt(p.qty || p.stock || 0);
+
             if (idx > -1) {
-                if (cart[idx].qty < p.qty) {
-                    cart[idx].qty++;
-                } else {
-                    alert("จำนวนในสต็อกไม่พอขาย!");
-                }
+                if (cart[idx].qty < stock) cart[idx].qty++;
+                else alert("ສິນຄ້າໃນສະຕັອກບໍ່ພໍ");
             } else {
-                cart.unshift({ qr: qr, name: p.name, price: p.price, qty: 1, stock: p.qty });
+                if (stock <= 0) {
+                    alert("ສິນຄ້າໝົດສະຕັອກ!");
+                    return;
+                }
+                cart.unshift({ qr: qr, name: p.name, price: cleanPrice, qty: 1, stock: stock });
             }
             renderCart();
         }
@@ -204,13 +191,13 @@
                 <div class="cart-item d-flex justify-content-between align-items-center">
                     <div>
                         <div class="fw-bold text-dark">${item.name}</div>
-                        <div class="small text-muted">รหัส: ${item.qr}</div>
+                        <div class="small text-muted">ລະຫັດ: ${item.qr}</div>
                         <div class="text-primary fw-bold">${item.price.toLocaleString()}.-</div>
                     </div>
                     <div class="d-flex align-items-center">
                         <div class="btn-group btn-group-sm me-3">
                             <button class="btn btn-light border" onclick="updateQty(${i},-1)">-</button>
-                            <span class="btn btn-white border-top border-bottom disabled text-dark" style="min-width:40px">${item.qty}</span>
+                            <span class="btn disabled text-dark border" style="min-width:40px">${item.qty}</span>
                             <button class="btn btn-light border" onclick="updateQty(${i},1)">+</button>
                         </div>
                         <button class="btn btn-link text-danger p-0" onclick="removeItem(${i})"><i class="bi bi-trash fs-5"></i></button>
@@ -218,7 +205,7 @@
                 </div>`;
             });
             document.getElementById('grand-total').innerText = total.toLocaleString();
-            document.getElementById('item-count').innerText = count + " ชิ้น";
+            document.getElementById('item-count').innerText = count + " ຊິ້ນ";
         }
 
         function updateQty(i, n) {
@@ -230,45 +217,29 @@
         function removeItem(i) { cart.splice(i, 1); renderCart(); }
         function clearCart() { cart = []; renderCart(); }
 
-        // --- 5. CHECKOUT (บันทึกยอด & ตัดสต็อก) ---
+        // --- 5. CHECKOUT ---
         async function checkout() {
             if (cart.length === 0) return;
-
-            if (confirm(`ยืนยันการรับชำระเงินบิลนี้?`)) {
-                const now = new Date();
-                const dateKey = now.toISOString().split('T')[0];
-                const dateFull = now.toLocaleDateString('th-TH');
-                const timeStr = now.toLocaleTimeString('th-TH');
-
+            if (confirm("ຢືນຢັນການຂາຍ?")) {
                 const updates = {};
-
+                const dateKey = new Date().toISOString().split('T')[0];
                 cart.forEach(item => {
                     updates[`/products/${item.qr}/qty`] = item.stock - item.qty;
                     const saleRef = db.ref(`sales/${dateKey}`).push();
                     updates[`/sales/${dateKey}/${saleRef.key}`] = {
-                        qr: item.qr,
-                        name: item.name,
-                        price: item.price,
-                        qty: item.qty,
-                        total: item.price * item.qty,
-                        fullDate: dateFull,
-                        time: timeStr
+                        qr: item.qr, name: item.name, price: item.price,
+                        qty: item.qty, total: item.price * item.qty,
+                        time: new Date().toLocaleTimeString('th-TH')
                     };
                 });
-
                 try {
                     await db.ref().update(updates);
-                    alert("✅ ขายสำเร็จ! สต็อกอัปเดตและบันทึกประวัติแล้ว");
-                    cart = [];
-                    renderCart();
-                    barcodeInput.focus();
-                } catch (err) {
-                    alert("เกิดข้อผิดพลาด: " + err.message);
-                }
+                    alert("✅ ຂາຍສຳເລັດ!");
+                    clearCart();
+                } catch (err) { alert("Error: " + err.message); }
             }
         }
     </script>
-
 </body>
 
 </html>
