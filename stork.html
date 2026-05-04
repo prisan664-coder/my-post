@@ -8,6 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
+    <!-- เพิ่มสคริปต์สำหรับจัดการ Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
             background: linear-gradient(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.85)), url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1500');
@@ -56,7 +58,6 @@
             padding: 5px 10px;
         }
 
-        /* ส่วนที่เพิ่มใหม่: ตกแต่งการ์ดราคารวม */
         .total-value-card {
             background: #2d5a27;
             color: white;
@@ -90,7 +91,13 @@
             </div>
         </div>
 
-        <!-- เพิ่มส่วนแสดงราคารวมตรงนี้ -->
+        <!-- ปุ่มดาวน์โหลด Excel อยู่ด้านบนราคารวม -->
+        <div class="mb-3">
+            <button class="btn btn-success w-100 rounded-3 shadow-sm py-2 fw-bold" onclick="exportToExcel()">
+                <i class="bi bi-file-earmark-excel"></i> ດາວໂຫລດລາຍການສິນຄ້າ (Excel)
+            </button>
+        </div>
+
         <div id="total-summary-area">
             <div class="total-value-card shadow-sm">
                 <div class="small opacity-75">มูลค่ารวมสินค้าทั้งหมดในสต็อก</div>
@@ -112,7 +119,6 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
 
     <script>
-        // --- 1. CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyC8b0h8yyTo5th6UMrI4_dKUB1ZnvCwZBw",
             authDomain: "fuji-mobile-shop.firebaseapp.com",
@@ -126,15 +132,16 @@
         const db = firebase.database();
         const ADMIN_PASS = "Zxc12345_";
         let scanner;
+        let currentProducts = []; // เก็บข้อมูลเพื่อ Export
 
-        // --- 2. LOAD DATA ---
         function loadStock() {
             db.ref('products').on('value', (snapshot) => {
                 const listArea = document.getElementById('stock-list');
                 const totalDisplay = document.getElementById('totalStockValue');
                 listArea.innerHTML = "";
+                currentProducts = [];
 
-                let grandTotalValue = 0; // ตัวแปรเก็บมูลค่ารวม
+                let grandTotalValue = 0;
 
                 if (!snapshot.exists()) {
                     listArea.innerHTML = '<div class="text-center mt-5">ไม่มีสินค้า</div>';
@@ -145,11 +152,18 @@
                 snapshot.forEach((child) => {
                     const item = child.val();
                     const key = child.key;
-
-                    // ส่วนที่เพิ่ม: คำนวณราคารวม (ลบคอมม่าออกก่อนเพื่อความชัวร์)
                     let cleanPrice = parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
                     let cleanQty = parseInt(item.qty) || 0;
                     grandTotalValue += (cleanPrice * cleanQty);
+
+                    // เก็บข้อมูลไว้ใน Array สำหรับ Excel
+                    currentProducts.push({
+                        "รหัสสินค้า": key,
+                        "ชื่อสินค้า": item.name,
+                        "ราคา": cleanPrice,
+                        "คงเหลือ": cleanQty,
+                        "มูลค่ารวม": cleanPrice * cleanQty
+                    });
 
                     listArea.innerHTML += `
                     <div class="card product-card p-3 shadow-sm item-row" data-code="${key}" data-name="${item.name}">
@@ -169,46 +183,52 @@
                         </div>
                     </div>`;
                 });
-
-                // แสดงยอดรวมทั้งหมดที่คำนวณได้
                 totalDisplay.innerText = grandTotalValue.toLocaleString();
             });
         }
 
-        // --- 3. SECURITY LOGIC (เหมือนเดิม) ---
+        // ฟังก์ชันใหม่สำหรับการ Export เป็น Excel
+        function exportToExcel() {
+            if (currentProducts.length === 0) {
+                alert("ไม่มีข้อมูลสำหรับดาวน์โหลด");
+                return;
+            }
+
+            const ws = XLSX.utils.json_to_sheet(currentProducts);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Stock");
+
+            const fileName = "Stock_FujiMobile_" + new Date().toLocaleDateString() + ".xlsx";
+            XLSX.writeFile(wb, fileName);
+        }
+
         function secureEdit(key, name, price, qty) {
             const pass = prompt("🔐 กรุณาใส่รหัสผ่านเพื่อแก้ไข:");
-            if (pass === null) return;
-
             if (pass === ADMIN_PASS) {
                 const newName = prompt("แก้ไขชื่อสินค้า:", name);
                 const newPrice = prompt("แก้ไขราคาขาย:", price);
                 const newQty = prompt("แก้ไขจำนวนคงเหลือ:", qty);
-
                 if (newName && newPrice && newQty) {
                     db.ref('products/' + key).update({
                         name: newName, price: newPrice, qty: parseInt(newQty)
                     }).then(() => alert("✅ แก้ไขข้อมูลเรียบร้อย"));
                 }
-            } else {
-                alert("❌ รหัสผ่านไม่ถูกต้อง! ไม่สามารถแก้ไขได้");
+            } else if (pass !== null) {
+                alert("❌ รหัสผ่านไม่ถูกต้อง!");
             }
         }
 
         function secureDelete(key, name) {
             const pass = prompt(`⚠️ ยืนยันการลบ "${name}"\nกรุณาใส่รหัสผ่านเพื่อลบ:`);
-            if (pass === null) return;
-
             if (pass === ADMIN_PASS) {
                 if (confirm("คุณแน่ใจจริงๆ ใช่ไหมว่าจะลบข้อมูลนี้ถาวร?")) {
                     db.ref('products/' + key).remove().then(() => alert("🗑️ ลบข้อมูลสำเร็จ"));
                 }
-            } else {
-                alert("❌ รหัสผ่านไม่ถูกต้อง! ไม่สามารถลบได้");
+            } else if (pass !== null) {
+                alert("❌ รหัสผ่านไม่ถูกต้อง!");
             }
         }
 
-        // --- 4. SEARCH & SCAN (เหมือนเดิม) ---
         function filterItems() {
             const val = document.getElementById('searchInput').value.toLowerCase();
             document.querySelectorAll('.item-row').forEach(row => {
